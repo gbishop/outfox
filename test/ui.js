@@ -31,7 +31,7 @@ function test2(button) {
             tts.removeObserver(token);
         }
     });
-    outfox.play(window.location.href+'/../bell.wav');
+    outfox.play(window.location.href+'/../bell.mp3');
 }
 
 function test3(button) {
