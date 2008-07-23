@@ -44,7 +44,7 @@ function test3(button) {
         }
     });
     outfox.say(node.innerHTML);
-    outfox.play(window.location.href+'/../bell.wav');
+    outfox.play(window.location.href+'/../bell.mp3');
 }
 
 function test4(button) {
@@ -64,7 +64,7 @@ function test4(button) {
     var token_speech = outfox.addObserver(callback);
     var token_sound =  outfox.addObserver(callback, 1);
     outfox.say(node.innerHTML);
-    outfox.play(window.location.href+'/../bell.wav', 1);
+    outfox.play(window.location.href+'/../bell.mp3', 1);
 }
 
 function test5(button) {
@@ -94,7 +94,7 @@ function test5(button) {
 function test6(button) {
     button.disabled = true;
     outfox.setProperty('loop', true);
-    outfox.play(window.location.href+'/../bell.wav');
+    outfox.play(window.location.href+'/../bell.mp3');
 }
 
 function test6Stop() {
@@ -123,5 +123,5 @@ function test7(button) {
     var token_sound =  outfox.addObserver(callback, 1);
     var node = document.getElementById('test7-text');
     outfox.say(node.innerHTML, 0, 'my speech name');
-    outfox.play(window.location.href+'/../bell.wav', 1, 'my sound name');
+    outfox.play(window.location.href+'/../bell.mp3', 1, 'my sound name');
 }
