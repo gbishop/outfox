@@ -61,7 +61,7 @@ utils.declare('outfox.Factory', null, {
     _createController: function(page_id, doc, fs) {
         // make sure we have a speech server started
         if(!this.proxy) {
-            this.proxy = new outfox.SpeechServerProxy();
+            this.proxy = new outfox.ServerProxy();
             logit('Factory: created speech proxy');
         }
         // create a controller object

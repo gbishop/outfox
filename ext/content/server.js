@@ -15,7 +15,7 @@
  * */
 const DELIMITER = '\3';
 
-utils.declare('outfox.SpeechServerProxy', null, {
+utils.declare('outfox.ServerProxy', null, {
     constructor: function() {
         this.socket = null;
         this.in_str = null;
@@ -63,7 +63,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
 		continue;
             }
 	}
-        logit('SpeechServerProxy: opened browser socket', port);
+        logit('ServerProxy: opened browser socket', port);
         return port;
     },
 
@@ -76,7 +76,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
             // chmod to make speech service executable
             var chmod = utils.buildPath('/', 'bin', 'chmod');
             utils.runProcess(chmod, ['0755', exec.path], true);
-            logit('SpeechServerProxy: chmoded speech server');
+            logit('ServerProxy: chmoded speech server');
 	} catch(e) {
 	    // assume executable if chmod fails
 	    var exec = utils.buildPath(null, 'platform', 'dist', 'outfox.exe');
@@ -89,7 +89,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
 	    // set the failure flag so all future observers receive the error
 	    this.failed = '{"action" : "failed-init", "description" : "Outfox failed to initialize."}';
         }
-        logit('SpeechServerProxy: launched speech server');
+        logit('ServerProxy: launched speech server');
     },
 
     _notify: function(page_id, json) {
@@ -108,7 +108,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
 	    try {
 		ob(json);
 	    } catch(e) {
-		logit('SpeechServerProxy: notify failure', e);
+		logit('ServerProxy: notify failure', e);
 	    }
 	}
     },
@@ -136,7 +136,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
 	}
 	// make sure we send when a complete command is ready
 	this.out_str.flush();
-	logit('SpeechServerProxy: sent message');
+	logit('ServerProxy: sent message');
     },
 
     /**
@@ -169,7 +169,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
         // open outgoing connection
         this.out_str = transport.openOutputStream(0,0,0);
 
-        logit('SpeechServerProxy: accepted incoming connection');
+        logit('ServerProxy: accepted incoming connection');
 
 	// send any buffered data
 	if(this.out_buff.length) {
@@ -185,14 +185,14 @@ utils.declare('outfox.SpeechServerProxy', null, {
      */
     onStopListening: function(socket, status) {
         this.socket.close();
-        logit('SpeechServerProxy: stopped listening');  
+        logit('ServerProxy: stopped listening');  
     },
 
     /**
      * Called when the input stream first receives data.
      */
     onStartRequest: function(request, context) {
-        logit('SpeechServerProxy: started request');  
+        logit('ServerProxy: started request');  
     },
 
     /**
@@ -205,7 +205,7 @@ utils.declare('outfox.SpeechServerProxy', null, {
         this.out_str = null;
 	this.in_buff = [];
 	this.out_buff = [];
-        logit('SpeechServerProxy: stopped request');  
+        logit('ServerProxy: stopped request');  
     },
 
     /**
@@ -235,6 +235,6 @@ utils.declare('outfox.SpeechServerProxy', null, {
 	    // save data for later
 	    this.in_buff += data;
 	}
-        logit('SpeechServerProxy: read data');
+        logit('ServerProxy: read data');
     }
 });
