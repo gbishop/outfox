@@ -18,9 +18,9 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import simplejson
 import socket
+import sys
 from page import PageController
 
-PLATFORMS = ['osx', 'win32', 'nix']
 DELIMITER = '\3'
 
 class Outfox(object):
@@ -93,13 +93,17 @@ class Outfox(object):
         self.server.sendMessage(msg)
 
     def _findModule(self):
+        if sys.platform == 'darwin':
+            pkg = 'osx'
+        elif sys.platform == 'win32':
+            pkg = 'win32'
+        else:
+            pkg = 'nix'
         module = None
-        for pkg in PLATFORMS:
-            try:
-                module = __import__(pkg)
-                break
-            except Exception, e:
-                pass
+        try:
+            module = __import__(pkg)
+        except Exception, e:
+            pass
         return module
 
 def main():
