@@ -1,7 +1,7 @@
 '''
 Code to support MP3 decode for pygame playback using pymedia.
 
-Copyright (c) 2008 Wayne Ian Clark
+Copyright (c) 2008 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
