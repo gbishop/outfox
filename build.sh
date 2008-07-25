@@ -12,4 +12,5 @@ do
   rm -rf $i
 done
 # zip it up
-zip -r outfox.xpi build/* -x@exclude.lst
+cd build
+zip -r ../outfox.xpi * -x@../exclude.lst
