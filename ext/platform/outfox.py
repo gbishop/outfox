@@ -57,8 +57,8 @@ class Outfox(object):
         msg = simplejson.dumps({'page_id' : '*', 'cmd' : cmd})
         s.sendall(msg+DELIMITER)
 
-    def quit(self):
-        self.module.quit()
+    def shutdown(self):
+        self.module.shutdown()
 
     def pushRequest(self, json):
         # decode the json

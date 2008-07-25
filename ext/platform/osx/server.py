@@ -94,12 +94,12 @@ class JSONServer(NSObject):
     def onEndEncountered_(self, stream):
         self.in_str.close()
         self.out_str.close()
-        self.observer.quit()
+        self.observer.shutdown()
 
     def onErrorOccurred_(self, stream):
         self.in_str.close()
         self.out_str.close()
-        self.observer.quit()
+        self.observer.shutdown()
 
     def onHasBytes_(self, stream):
         size, bytes = stream.read_maxLength_(None, 512)

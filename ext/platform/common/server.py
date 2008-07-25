@@ -46,19 +46,19 @@ class JSONServer(asynchat.async_chat):
     def handle_close(self):
         asynchat.async_chat.handle_close(self)
         self.close()
-        self.observer.quit()
+        self.observer.shutdown()
 
     def handle_expt(self):
         asynchat.async_chat.handle_expt(self)
         # close the socket so we can quit
         self.close()
-        self.observer.quit()
+        self.observer.shutdown()
     
     def handle_error(self):
         asynchat.async_chat.handle_error(self)
         # close the socket so we can quit
         self.close()
-        self.observer.quit()
+        self.observer.shutdown()
 
     def collect_incoming_data(self, data):
         self.in_buff.append(data)

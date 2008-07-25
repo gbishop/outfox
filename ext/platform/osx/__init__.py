@@ -29,5 +29,5 @@ def run():
     # enter the main event loop
     AppHelper.runConsoleEventLoop()
 
-def quit():
+def shutdown():
     AppHelper.stopEventLoop()

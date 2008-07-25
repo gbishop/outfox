@@ -32,7 +32,7 @@ def buildServer(port):
 def buildChannel(ch_id):
     return channel.ChannelController(ch_id)
 
-def quit():
+def shutdown():
     event = pygame.event.Event(pygame.QUIT)
     pygame.event.post(event)
 
