@@ -103,11 +103,15 @@ class Outfox(object):
         try:
             module = __import__(pkg)
         except Exception, e:
+            print 'import failed', e
             pass
         return module
 
 def main():
     import sys
+    # enable printing to a file on Windows
+    if sys.platform == 'win32':
+        sys.stdout = sys.stderr = open('c:/windows/temp/outfox.log', 'wt')
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception
     port = int(sys.argv[1])

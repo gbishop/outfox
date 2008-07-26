@@ -1,6 +1,6 @@
 #!/bin/bash
 # remove old extension build and staging area
-rm outfox.xpi
+rm outfox*.xpi
 rm -rf build
 # create staging area
 cp -r ext build
