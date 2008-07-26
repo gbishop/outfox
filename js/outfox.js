@@ -197,9 +197,9 @@ var outfox = {
     /**
      * Adds a listener for events in a channel. The listener signature should be
      *
-     * function observer(tts, cmd)
+     * function observer(outfox, cmd)
      *
-     * where tts is the outfox object and cmd is an object with all of the
+     * where outfox is the outfox object and cmd is an object with all of the
      * callback data as properties.
      * 
      * @param ob Observer function

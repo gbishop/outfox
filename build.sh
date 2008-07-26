@@ -17,4 +17,4 @@ do
 done
 # zip it up
 cd build
-zip -r ../outfox.xpi * -x@../exclude.lst
+zip -r ../outfox-$1.xpi * -x@../exclude.lst

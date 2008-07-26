@@ -32,9 +32,11 @@ EVT_PROCESS_REQUEST = pygame.locals.USEREVENT
 # maximum number of sound channels allowed
 MAX_CHANNELS = 256
 
-# exponential regression for wpm
-RATE_A = 102.19150898501448
-RATE_B = 1.1154117185341268
+# exponential regression for wpm; MSMary values used as defaults for unknown
+# voices
+E_REG = {'MSSam' : (137.89, 1.11),
+         'MSMary' : (156.63, 1.11),
+         'MSMike' : (154.37, 1.11)}
 
 # last event id assigned to a channel
 last_id = pygame.locals.USEREVENT+1
@@ -110,7 +112,8 @@ class ChannelController(object):
 
         # take config values and apply to the speech engine
         self.tts.Voice = self.config['voice']
-        self.tts.Rate = int(math.log(self.config['rate']/RATE_A, RATE_B))
+        a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
+        self.tts.Rate = int(math.log(self.config['rate']/a, b))
 
     def shutdown(self):
         if self.player:
@@ -316,7 +319,8 @@ class ChannelController(object):
         val = cmd['value']
         if name == 'rate':
             if self.tts:
-                self.tts.Rate = int(math.log(val/RATE_A, RATE_B))
+                a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
+                self.tts.Rate = int(math.log(val/a, b))
         elif name == 'volume':
             if self.player is not None:
                 self.player.set_volume(val)
