@@ -5,9 +5,13 @@ rm -rf build
 # create staging area
 cp -r ext build
 # clean out win32 build area
-rm -rf build/platform/ext/build
+rm -rf build/platform/build
 # remove all svn cruft
 find build | grep .svn$ | while read i
+do
+  rm -rf $i
+done
+find build | grep .pyc$ | while read i
 do
   rm -rf $i
 done
