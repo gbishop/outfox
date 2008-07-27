@@ -18,20 +18,28 @@ function onLoad(event) {
     outfox.init("box", onPageReady);
 }
 
-function onPageReady() {
+function enableButtons(run, stop) {
     var buttons = document.getElementsByTagName('button');
     for(var i=0; i < buttons.length; i++) {
         var b = buttons[i];
-        b.disabled = false;
+	if(b.id == 'stop') {
+	    b.disabled = !stop;
+	} else {
+            b.disabled = !run;
+	}
     }
 }
 
+function onPageReady() {
+    enableButtons(true);
+}
+
 function test1(button) {
-    button.disabled = true;
+    enableButtons(false);
     var node = document.getElementById('test1-text');
     var token = outfox.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-say') {
-            button.disabled = false;
+            enableButtons(true);
             tts.removeObserver(token);
         }
     });
@@ -40,10 +48,10 @@ function test1(button) {
 }
 
 function test2(button) {
-    button.disabled = true;
+    enableButtons(false);
     var token = outfox.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-play') {
-            button.disabled = false;
+	    enableButtons(true);
             tts.removeObserver(token);
         }
     });
@@ -52,10 +60,10 @@ function test2(button) {
 
 function test3(button) {
     var node = document.getElementById('test3-text');
-    button.disabled = true;
+    enableButtons(false);
     var token = outfox.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-play') {
-            button.disabled = false;
+	    enableButtons(true);
             tts.removeObserver(token);
         }
     });
@@ -65,14 +73,14 @@ function test3(button) {
 
 function test4(button) {
     var node = document.getElementById('test4-text');
-    button.disabled = true;
+    enableButtons(false);
     var count = 0;
     var callback = function(tts, cmd) {
         if(cmd.action == 'finished-play' || cmd.action == 'finished-say') {
             count++;
         }
         if(count == 2) {
-            button.disabled = false;
+	    enableButtons(true);
             tts.removeObserver(token_speech);
             tts.removeObserver(token_sound);
         }
@@ -84,14 +92,14 @@ function test4(button) {
 }
 
 function test5(button) {
-    button.disabled = true;
+    enableButtons(false);
     var count = 0;
     var token = outfox.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-say') {
             if(count == 0) {
                 count++;
             } else if(count == 1) {
-                button.disabled = false;
+		enableButtons(true);
                 tts.removeObserver(token);
             }
         }
@@ -108,21 +116,21 @@ function test5(button) {
 }
 
 function test6(button) {
-    button.disabled = true;
+    enableButtons(false, true);
     outfox.setProperty('loop', true);
     outfox.play(window.location.href+'/../bell.mp3');
 }
 
 function test6Stop() {
     var button = document.getElementById('test6-button');
-    button.disabled = false;
+    enableButtons(true, false);
     outfox.stop();
     outfox.reset();
 }
 
 function test7(button) {
     var logger = document.getElementById('test7-console');
-    button.disabled = true;
+    enableButtons(false);
     var count = 0;
     var callback = function(tts, cmd) {
         logger.innerHTML = JSON.stringify(cmd) + '\n' + logger.innerHTML;
@@ -130,7 +138,7 @@ function test7(button) {
             count++;
         }
         if(count == 2) {
-            button.disabled = false;
+            enableButtons(true);
             tts.removeObserver(token_speech);
             tts.removeObserver(token_sound);
         }
@@ -173,7 +181,7 @@ function test7(button) {
     <div>
       <h2>Sound Properties</h2>
       <p>Click to hear a looping sound. Click the stop button to end it.</p>
-      <button id="test6-button" onclick="test6(this)" disabled="true">Run</button><button onclick="test6Stop()" disabled="true">Stop</button>
+      <button id="test6-button" onclick="test6(this)" disabled="true">Run</button><button onclick="test6Stop()" disabled="true" id="stop">Stop</button>
     </div>    
     <div>
       <h2>Callbacks</h2>
