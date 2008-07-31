@@ -266,9 +266,8 @@ var outfox = {
 	    // all channels; don't store directly because we don't want changes
 	    // to the default channel to ruin the property defaults for later
 	    // channels
-	    delete cmd.action;
-	    for(var key in cmd) {
-		this.defaults[key] = cmd[key];
+	    for(var key in cmd.config) {
+		this.defaults[key] = cmd.config[key];
 	    }
             try {
 		// tell creator that outfox is ready
