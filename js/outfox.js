@@ -51,6 +51,8 @@ var outfox = {
         this.config = {};
         // defaults for a channel when created
         this.defaults = {};
+	// queue up requests in JS when not ready
+	this.queue = [];
     },
 
     /**
@@ -229,6 +231,15 @@ var outfox = {
             }
         }
     },
+
+    /**
+     * Gets if the client has received the initial server config or not.
+     *
+     * @return true if outfox client is ready for client use, false otherwise
+     */
+    isReady: function() {
+	return (this.queue == null);
+    },
     
     _onResponse: function(event) {
 	var node = event.target;
@@ -259,15 +270,20 @@ var outfox = {
     },
 
     _onSetConfig: function(cmd) {
-	// if this is the first config response, it means the server is now
-	// initialized and ready for use
-        if(this.ready_cb) {
-	    // store a copy of the default channel config as the defaults for
-	    // all channels; don't store directly because we don't want changes
-	    // to the default channel to ruin the property defaults for later
-	    // channels
+        // store initial configuration for this channel
+        this.config[cmd.channel] = cmd.config;
+
+        if(this.queue) {
+	    // first config response, make a copy as default
 	    for(var key in cmd.config) {
 		this.defaults[key] = cmd.config[key];
+	    }
+	    // process all queued messages
+	    var q = this.queue;
+	    // reset instance queue so commands can be sent
+	    this.queue = null;
+	    for(var i=0; i < q.length; i++) {
+		this._send(q[i]);
 	    }
             try {
 		// tell creator that outfox is ready
@@ -278,8 +294,6 @@ var outfox = {
             // remove the ready callback
             this.ready_cb = null;
         }
-        // store initial configuration for this channel
-        this.config[cmd.channel] = cmd.config;
     },
 
     _onSetProperty: function(cmd) {
@@ -310,9 +324,13 @@ var outfox = {
     },
 
     _send: function(cmd) {
-        var json = JSON.stringify(cmd);
-        var node = document.createTextNode(json);
-        this.out_dom.appendChild(node);
+	if(this.queue != null) {
+	    this.queue.push(cmd);
+	} else {
+            var json = JSON.stringify(cmd);
+            var node = document.createTextNode(json);
+            this.out_dom.appendChild(node);
+	}
     }
 };
 
