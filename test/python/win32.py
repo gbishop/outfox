@@ -12,7 +12,7 @@ pygame.init()
 pygame.mixer.quit()
 tts = pyTTS.Create(output=False)
 tts.SetOutputFormat(44, 16, 1)
-tts.Voice = 'MSMary'
+#tts.Voice = 'MSMary'
 stream, events = tts.Speak('My name is Sam', pyTTS.tts_is_xml)
 format = stream.Format.GetWaveFormatEx()
 pygame.mixer.init(format.SamplesPerSec, format.BitsPerSample, 2)
