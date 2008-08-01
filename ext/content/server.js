@@ -25,6 +25,11 @@ utils.declare('outfox.ServerProxy', null, {
 	this.out_buff = [];
 	this.failed = null;
 
+	// encode all outgoing unicode as utf-8
+	// decode all incoming to unicode from utf-8
+	this.codec = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
+	this.codec.charset = 'utf-8';
+
         // initialize the socket and launch the speech server
         var port = this._initializeSocket();
         this._initializeProcess(port);
@@ -63,7 +68,7 @@ utils.declare('outfox.ServerProxy', null, {
 		continue;
             }
 	}
-        logit('ServerProxy: opened browser socket', port);
+        //logit('ServerProxy: opened browser socket', port);
         return port;
     },
 
@@ -76,7 +81,7 @@ utils.declare('outfox.ServerProxy', null, {
             // chmod to make speech service executable
             var chmod = utils.buildPath('/', 'bin', 'chmod');
             utils.runProcess(chmod, ['0755', exec.path], true);
-            logit('ServerProxy: chmoded speech server');
+            //logit('ServerProxy: chmoded speech server');
 	} catch(e) {
 	    // assume executable if chmod fails
 	    var exec = utils.buildPath(null, 'platform', 'dist', 'outfox.exe');
@@ -89,7 +94,7 @@ utils.declare('outfox.ServerProxy', null, {
 	    // set the failure flag so all future observers receive the error
 	    this.failed = '{"action" : "failed-init", "description" : "Outfox failed to initialize."}';
         }
-        logit('ServerProxy: launched speech server');
+        //logit('ServerProxy: launched speech server');
     },
 
     _notify: function(page_id, json) {
@@ -108,7 +113,7 @@ utils.declare('outfox.ServerProxy', null, {
 	    try {
 		ob(json);
 	    } catch(e) {
-		logit('ServerProxy: notify failure', e);
+		//logit('ServerProxy: notify failure', e);
 	    }
 	}
     },
@@ -122,6 +127,9 @@ utils.declare('outfox.ServerProxy', null, {
 	    this.out_buff.push([page_id, json]);
 	    return;
 	}
+	// convert unicode to utf-8
+	json = this.codec.ConvertFromUnicode(json) + this.codec.Finish();
+	
 	// include page id and null character delimiter
 	var msg = '{"page_id" : '+page_id+', "cmd" : '+json+'}'+DELIMITER;
 	var size = msg.length;
@@ -136,7 +144,7 @@ utils.declare('outfox.ServerProxy', null, {
 	}
 	// make sure we send when a complete command is ready
 	this.out_str.flush();
-	logit('ServerProxy: sent message');
+	//logit('ServerProxy: sent message');
     },
 
     /**
@@ -169,7 +177,7 @@ utils.declare('outfox.ServerProxy', null, {
         // open outgoing connection
         this.out_str = transport.openOutputStream(0,0,0);
 
-        logit('ServerProxy: accepted incoming connection');
+        //logit('ServerProxy: accepted incoming connection');
 
 	// send any buffered data
 	if(this.out_buff.length) {
@@ -185,14 +193,14 @@ utils.declare('outfox.ServerProxy', null, {
      */
     onStopListening: function(socket, status) {
         this.socket.close();
-        logit('ServerProxy: stopped listening');  
+        //logit('ServerProxy: stopped listening');  
     },
 
     /**
      * Called when the input stream first receives data.
      */
     onStartRequest: function(request, context) {
-        logit('ServerProxy: started request');  
+        //logit('ServerProxy: started request');  
     },
 
     /**
@@ -205,7 +213,7 @@ utils.declare('outfox.ServerProxy', null, {
         this.out_str = null;
 	this.in_buff = [];
 	this.out_buff = [];
-        logit('ServerProxy: stopped request');  
+        //logit('ServerProxy: stopped request');  
     },
 
     /**
@@ -224,6 +232,8 @@ utils.declare('outfox.ServerProxy', null, {
 	    // loop over all commands except the last which can't be complete
 	    for(var i=0; i < segs.length-1; i++) {
 		var msg = segs[i];
+		// convert utf-8 to unicode
+		msg = this.codec.ConvertToUnicode(msg) + this.codec.Finish();
                 // @todo: could use a hack to avoid decode/encode of json
                 var dec = utils.fromJson(msg);
 		// dispatch remaining json to observer for the given page id
@@ -235,6 +245,6 @@ utils.declare('outfox.ServerProxy', null, {
 	    // save data for later
 	    this.in_buff += data;
 	}
-        logit('ServerProxy: read data');
+        //logit('ServerProxy: read data');
     }
 });

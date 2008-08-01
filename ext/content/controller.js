@@ -45,7 +45,7 @@ utils.declare('outfox.PageController', null, {
 	// is ready
         this.proxy.send(this.id, '{"action" : "get-config"}');
 
-        logit('PageController: initialized');
+        //logit('PageController: initialized');
     },
 
     shutdown: function() {

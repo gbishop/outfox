@@ -24,7 +24,7 @@ utils.declare('outfox.Factory', null, {
         this.tokens = [];
         this.proxy = null;
         this.tokens.push(utils.connect(window, 'load', this, 'initialize'));
-	logit('Factory: created');
+	//logit('Factory: created');
     },
 
     initialize: function(event) {
@@ -36,7 +36,7 @@ utils.declare('outfox.Factory', null, {
         this.tokens.push(utils.connect(ac, 'pagehide', this, '_onPageUnload'));
 	var tabs = gBrowser.tabContainer;
 	this.tokens.push(utils.connect(tabs, 'TabClose', this, '_onTabClose', false));
-	logit('Factory: initialized');
+	//logit('Factory: initialized');
     },
 
     shutdown: function(event) {
@@ -55,20 +55,20 @@ utils.declare('outfox.Factory', null, {
         if(this.proxy) {
             this.proxy.shutdown();
 	}
-	logit("Factory: shutdown");
+	//logit("Factory: shutdown");
     },
 
     _createController: function(page_id, doc, fs) {
         // make sure we have a speech server started
         if(!this.proxy) {
             this.proxy = new outfox.ServerProxy();
-            logit('Factory: created speech proxy');
+            //logit('Factory: created speech proxy');
         }
         // create a controller object
         var pc = new outfox.PageController(page_id, doc, fs, this.proxy);
         // store controller in conjunction with the document
         this.controllers[page_id] = pc;
-        logit('Factory: created outfox controller');
+        //logit('Factory: created outfox controller');
     },
 
     _onPageLoad: function(event) {
@@ -86,7 +86,7 @@ utils.declare('outfox.Factory', null, {
 		// monitor node additions to see if it is added later
 		var cb = utils.bind(this, this._onNodeInserted, [this.page_id]);
 		this.page_tokens[this.page_id] = utils.connect(doc, 'DOMNodeInserted', cb);
-		logit('Factory: created insert watcher');
+		//logit('Factory: created insert watcher');
 	    }
 	    // increment no matter what so we can track node watcher hook
 	    ++this.page_id;
@@ -102,14 +102,14 @@ utils.declare('outfox.Factory', null, {
 	    if(pt) {
 		utils.disconnect(pt);
 		delete this.page_tokens[page_id];
-                logit('Factory: disconnected insert watcher');
+                //logit('Factory: disconnected insert watcher');
 	    }
 	    // destroy the controller if one exists for the document
 	    var pc = this.controllers[page_id];
 	    if(pc) {
                 pc.shutdown();
                 delete this.controllers[page_id];
-                logit('Factory: destroyed outfox controller');
+                //logit('Factory: destroyed outfox controller');
 	    }
         }
     },
@@ -129,7 +129,7 @@ utils.declare('outfox.Factory', null, {
 	    var pt = this.page_tokens[page_id];
 	    utils.disconnect(pt);
 	    delete this.page_tokens[page_id];
-	    logit('Factory: disconnected insert watcher');
+	    //logit('Factory: disconnected insert watcher');
 	    // create the controller
 	    this._createController(page_id, fs.ownerDocument, fs);
         }	
