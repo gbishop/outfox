@@ -65,31 +65,41 @@ utils.declare('outfox.PageController', null, {
 	    var json = node.nodeValue;
 	    var cmd = utils.fromJson(json);
 
-/*	    if(cmd.url) {
+	    if(cmd.url) {
 		// check if url is cached
 		var fn = this.cache.getLocalFilename(cmd.url);
-		logit('in cache? ', fn);
 		if(!fn) {
-		    logit('doing prefetch');
+		    // define a callback for when the prefetch completes and
+		    // the cache entry is opened for filename access
 		    var self = this;
-		    var obs = function(req, event) {
-			logit('prefetch complete', cmd.url);
-			var fn = self.cache.getLocalFilename(cmd.url);
-			delete cmd.deferred;
-			cmd.filename = fn;
+		    var obs = function(reqid, filename) {
+			// change the action to indicate a deferred result
+			// which can be paired with the original based on the
+			// deferred request id
+			cmd.action = 'deferred-result';
+			// set request 
+			// attach the filename
+			cmd.filename = filename;
+			// encode as json again
 			json = utils.toJson(cmd);
-			logit(json);
+			//logit(json);
 			// send the json using the proxy
-			//self.proxy.send(self.id, json);
+			self.proxy.send(self.id, json);
 		    }
 		    // prefetch url
-		    this.cache.fetch(cmd.url, obs);
-		    logit('prefetch called');
-		    // mark command as deferred
-		    cmd.deferred = 'true';
+		    var reqid = this.cache.fetch(cmd.url, obs);
+		    // mark command as deferred for now
+		    cmd.deferred = reqid;
 		    json = utils.toJson(cmd);
+		    //logit(json);
+		} else {
+		    // make the command with the local cached copy filename
+		    // in case the external server can make use of it instead
+		    cmd.filename = fn;
+		    json = utils.toJson(cmd);
+		    //logit(json);
 		}
-	    }*/
+	    }
 
 	    // destroy request node
 	    this.out_queue.removeChild(node);

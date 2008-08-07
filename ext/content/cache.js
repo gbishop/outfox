@@ -19,8 +19,9 @@ utils.declare('outfox.CacheController', null, {
 	this.fs = Components.classes["@mozilla.org/prefetch-service;1"].getService(Components.interfaces.nsIPrefetchService);
 	this.ios = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
 	this.nsic = Components.interfaces.nsICache;
-	this.sess = cs.createSession('HTTP', this.nsic.STORE_ANYWHERE,
+	this.sess = cs.createSession('HTTP', this.nsic.STORE_ON_DISK,
 				     this.nsic.STREAM_BASED);
+	this.reqid = 0;
     },
 
     getLocalFilename: function(url) {
@@ -30,25 +31,48 @@ utils.declare('outfox.CacheController', null, {
 	} catch(e) {
 	    return null;
 	}
-	var target = entry.file.target;
+	var target = entry.file.path;
 	entry.close();
 	return target;
     },
 
     fetch: function(url, observer) {
+	var reqid = this.reqid++;
 	var req = new XMLHttpRequest();
 	req.mozBackgroundRequest = true;
 	req.open('GET', url, true);
+	// define a callback for asynchronous cache entry opening
+	// can't do sync within the ready state change context because the
+	//  cache entry is still held open by the xhr in there (deadlock!)
+	var cache_obs = {
+	    onCacheEntryAvailable: function(entry, access, status) {
+		// invoke the external observer with the filename
+		observer(reqid, entry.file.path);
+	    }
+	};
+	var self = this;
 	req.onreadystatechange = function(event) {
 	    if(req.readyState == 4) {
-		// http, ftp, or file
+		// http gives 200 on success, ftp or file gives 0
 		if(req.status == 200 || req.status == 0) {
-		    observer(req, event);
+		    // fetch the info from the cache asynchronously
+		    setTimeout(function() {
+			try {
+			    self.sess.asyncOpenCacheEntry(url, 
+							  self.nsic.ACCESS_READ,
+							  cache_obs);
+			} catch (e) {
+			    logit(e);
+			}
+		    }, 0);
 		} else {
-		    logit('XHR error');
+		    // still need to callback with null as the filename so any
+		    // deferred requests can be fulfilled
+		    observer(url, null);
 		}
 	    }
 	};
-	req.send(null); 
+	req.send(null);
+	return reqid;
     }
 });
