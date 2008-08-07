@@ -14,13 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  * */
 utils.declare('outfox.PageController', null, {
-    CHANNEL_CLASS : 'channel',
-
     constructor: function(id, doc, div, proxy) {
         this.id = id;
 	this.doc = doc;
         this.div = div;
         this.proxy = proxy;
+
+	// create cache session
+	this.cache = new outfox.CacheController();
 
         // locate or add incoming and outgoing queues
 	this.in_queue = this.doc.getElementById(ROOT_ID + '-in');
@@ -58,12 +59,40 @@ utils.declare('outfox.PageController', null, {
     },
 
     _onRequest: function(event) {
-	var cmd = event.target;
-	if(cmd.nodeName == '#text') {
+	var node = event.target;
+	if(node.nodeName == '#text') {
 	    // pull out json encoded command
-	    var json = cmd.nodeValue;
+	    var json = node.nodeValue;
+	    var cmd = utils.fromJson(json);
+
+/*	    if(cmd.url) {
+		// check if url is cached
+		var fn = this.cache.getLocalFilename(cmd.url);
+		logit('in cache? ', fn);
+		if(!fn) {
+		    logit('doing prefetch');
+		    var self = this;
+		    var obs = function(req, event) {
+			logit('prefetch complete', cmd.url);
+			var fn = self.cache.getLocalFilename(cmd.url);
+			delete cmd.deferred;
+			cmd.filename = fn;
+			json = utils.toJson(cmd);
+			logit(json);
+			// send the json using the proxy
+			//self.proxy.send(self.id, json);
+		    }
+		    // prefetch url
+		    this.cache.fetch(cmd.url, obs);
+		    logit('prefetch called');
+		    // mark command as deferred
+		    cmd.deferred = 'true';
+		    json = utils.toJson(cmd);
+		}
+	    }*/
+
 	    // destroy request node
-	    this.out_queue.removeChild(cmd);
+	    this.out_queue.removeChild(node);
 	    // send the json using the proxy
 	    this.proxy.send(this.id, json);
 	}

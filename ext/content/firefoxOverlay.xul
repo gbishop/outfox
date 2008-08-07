@@ -17,7 +17,8 @@
 <overlay id="outfox-overlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <script type="application/x-javascript" src="utils.js"/>
-  <script type="application/x-javascript" src="controller.js"/>
+  <script type="application/x-javascript" src="cache.js"/>
+  <script type="application/x-javascript" src="page.js"/>
   <script type="application/x-javascript" src="server.js"/>
   <script type="application/x-javascript" src="overlay.js"/>
 </overlay>

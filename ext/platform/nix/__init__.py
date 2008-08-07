@@ -21,7 +21,6 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 from common.server import JSONServer
 import channel
 import asyncore
-import threading
 import pygame.event
 import pygame.display
 import pygame.locals
@@ -40,19 +39,15 @@ def run():
     # have to init the damn display system to use sound, ugh
     pygame.display.init()
     # start the server thread with a timeout value
-    ts = threading.Thread(target=asyncore.loop, args=[2])
-    ts.start()
     # pygame event loop
     while 1:
-        # wait for an event
-        event = pygame.event.wait()
-        if event.type == channel.EVT_PROCESS_REQUEST:
-            # handle a request pushed to a channel
-            try:
-                event.channel.onProcessRequest(event.command)
-            except Exception, e:
-                # print and consume exceptions
-                print e
+        # poll asyncore
+        asyncore.poll(0.005)
+        # look for an event
+        event = pygame.event.poll()
+        if event.type == pygame.NOEVENT:
+            # nothing to read
+            continue
         elif event.type == pygame.locals.QUIT:
             # exit the event loop
             return

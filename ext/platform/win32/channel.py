@@ -27,8 +27,6 @@ import pygame.sndarray
 import weakref
 import Queue
 
-# special event used to indicate the event queue should be processed
-EVT_PROCESS_REQUEST = pygame.locals.USEREVENT
 # maximum number of sound channels allowed
 MAX_CHANNELS = 256
 
@@ -139,14 +137,6 @@ class ChannelController(object):
         self.observer = ob
 
     def pushRequest(self, cmd):
-        # send an event to wake the handler on the next pygame loop
-        # we have to do this in case the request is coming in on a different
-        # thread (e.g., server)
-        event = pygame.event.Event(EVT_PROCESS_REQUEST, command=cmd, 
-                                   channel=self)
-        pygame.event.post(event)
-
-    def onProcessRequest(self, cmd):
         action = cmd.get('action')
         if action == 'stop':
             # process stops immediately
