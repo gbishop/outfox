@@ -18,6 +18,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import urllib2
 import tts
 import common.mp3
+from common.channel import ChannelBase
 import pygame.event
 import pygame.mixer
 import pygame.locals
@@ -47,31 +48,19 @@ def assignIdToChannel(channel):
 def getChannelFromId(id):
     return channel_map[id]
 
-class ChannelController(object):
+class ChannelController(ChannelBase):
     def __init__(self, ch_id):
-        # unique id for this channel
-        self.id = ch_id
-        # observer for channel callbacks
-        self.observer = None
-        # queue of utterances
-        self.queue = []
-        # queue of requests to process (thread safe)
-        self.requests = Queue.Queue()
+        ChannelBase.__init__(self, ch_id)
         # queue of utterance word samples
         self.words = []
-        # speech synth initialized flag
-        self.ready = False
         # channel player
         self.player = None
         # pygame id used to contact this channel for callbacks
         self.player_id = assignIdToChannel(self)
-        # busy flag
-        self.busy = False
-        # name assigned by the client to a speech utterance or sound that
-        # can be paired with callback data
-        self.name = None
         # whether we're playing speech or sound
         self.done_action = None
+        # whether we're initialized or
+        self.ready = False
         # set config defaults
         self._initializeConfig()
 
@@ -97,43 +86,10 @@ class ChannelController(object):
     def shutdown(self):
         if self.player:
             self.player.stop()
-        self.observer = None
+        ChannelBase.shutdown(self)
     
-    def _processQueue(self):
-        while (not self.busy) and len(self.queue):
-            cmd = self.queue.pop(0)
-            action = cmd.get('action')
-            if action == 'say':
-                self.say(cmd)
-            elif action == 'play':
-                self.play(cmd)
-            elif action == 'set-queued':
-                self.setProperty(cmd)
-            elif action == 'get-config':
-                self.getConfig(cmd)
-            elif action == 'reset-queued':
-                self.reset()
-
     def setObserver(self, ob):
         self.observer = ob
-
-    def pushRequest(self, cmd):
-        action = cmd.get('action')
-        if action == 'stop':
-            # process stops immediately
-            self.stop()
-        elif action == 'set-now':
-            # process immediate property changes
-            self.setProperty(cmd)
-        elif action == 'reset-now':
-            # process immediate reset of all properties
-            self.reset()
-        else:
-            # queue command; slight waste of time if we immediately pull it back
-            # out again, but it's clean
-            self.queue.append(cmd)
-            # process the queue
-            self._processQueue()
 
     def reset(self):
         # reinitialize local config
@@ -145,12 +101,9 @@ class ChannelController(object):
         if self.player:
             self.player.stop()
             self.player = None
-        # reset queue and flags 
-        self.queue = []
-        self.words = []
-        self.busy = False
-        self.name = None
+        ChannelBase.stop(self)
         self.done_action = None
+        self.words = []
     
     def say(self, cmd):
         # make sure the speech string isn't empty; adhere to protocol
@@ -221,38 +174,40 @@ class ChannelController(object):
         # configure channel volume
         self.player.set_volume(self.config['volume'])
         # configure channel callback
-        self.player.set_endevent(self.player_id)        
-        # fetch the file at the url
-        try:
-            uh = urllib2.urlopen(cmd['url'])
-        except urllib2.URLError:
-            msg['action'] = 'error'
-            msg['description'] = 'bad sound url'
-            msg['url'] = uh.url
-            # sound didn't initialize, abort
-            self.observer.pushResponse(msg)
-            return
+        self.player.set_endevent(self.player_id)
 
-        # we can't seek backward after reading data from the url stream so we
-        # have to check for mp3 at the end of the url as signifying the file
-        # type and how to handle it
-        if uh.url.endswith('mp3'):
+        fn = cmd.get('filename')
+        if fn is not None:
+            # fetch the file from the local disk
             try:
-                # might be an mp3, try to decode
-                snd = common.mp3.MakeSound(uh)
-            except Exception, e:
-                snd = None
+                fh = file(fn, 'rb')
+            except IOError:
+                msg['action'] = 'error'
+                msg['description'] = 'bad sound file'
+                msg['filename'] = fn
+                self.observer.pushResponse(msg)
+                return
+            # handle as local where we can seek back to start after trying it
+            # as an mp3
+            snd = self._soundFromFile(fh)
         else:
+            # fetch the file at the url
             try:
-                # @todo: does this work in pygame 1.7.1?
-                snd = pygame.mixer.Sound(uh)
-            except pygame.error:
-                snd = None
+                uh = urllib2.urlopen(cmd['url'])
+            except urllib2.URLError:
+                msg['action'] = 'error'
+                msg['description'] = 'bad sound url'
+                msg['url'] = cmd['url']
+                self.observer.pushResponse(msg)
+                return
+            # handle as remote where we have to use extension detection because
+            # seeking back to start does not work
+            snd = self._soundFromURL(uh)
         
         if snd is None:
             msg['action'] = 'error'
             msg['description'] = 'bad sound format'
-            msg['url'] = uh.url
+            msg['url'] = cmd['url']
             # bad sound format, abort
             self.observer.pushResponse(msg)
             return
@@ -272,6 +227,39 @@ class ChannelController(object):
         msg['channel'] = self.id
         msg['action'] = 'started-play'
         self.observer.pushResponse(msg)
+
+    def _soundFromFile(self, handle):
+        # we can reset a local file stream, so first try as mp3
+        try:
+            return common.mp3.MakeSound(handle)
+        except Exception, e:
+            # seek back to the file start
+            handle.seek(0)
+        # now try as whatever pygame can support
+        try:
+            # @todo: does this work in pygame 1.7.1?
+            snd = pygame.mixer.Sound(handle)
+        except pygame.error:
+            snd = None
+        return snd
+
+    def _soundFromURL(self, handle):
+        # we can't seek backward after reading data from the url stream so we
+        # have to check for mp3 at the end of the url as signifying the file
+        # type and how to handle it
+        if handle.url.endswith('mp3'):
+            try:
+                # might be an mp3, try to decode
+                snd = common.mp3.MakeSound(handle)
+            except Exception, e:
+                snd = None
+        else:
+            try:
+                # @todo: does this work in pygame 1.7.1?
+                snd = pygame.mixer.Sound(handle)
+            except pygame.error:
+                snd = None
+        return snd
 
     def getConfig(self, cmd):
         if not self.ready:

@@ -16,32 +16,19 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import objc
+from common.channel import ChannelBase
 from Foundation import *
 from AppKit import *
 
-class ChannelController(NSObject):
+class ChannelController(NSObject, ChannelBase):
     def initWithId_(self, ch_id):
         self = super(ChannelController, self).init()
         if self:
-            # unique id for this channel
-            self.id = ch_id
-            # observer for channel callbacks
-            self.observer = None
-            # queue of utterances
-            self.queue = []
-            # deferred results
-            self.deferreds = {}
-            # latest deferred request id that stalled the queue
-            self.stalled_id = None
+            # invoke base constructor manually since we're in NSObject land
+            ChannelBase.__init__(self, ch_id)
             # speech and sound players
             self.tts = None
             self.sound = None
-            # busy flag; used instead of tts and sound busy methods which are
-            # not documented as to when they are set and reset
-            self.busy = False
-            # name assigned by the client to a speech utterance or sound that
-            # can be paired with callback data
-            self.name = None
             # set config defaults
             self._initializeConfig()
         return self
@@ -60,83 +47,8 @@ class ChannelController(NSObject):
         if self.sound:
             self.sound.stop()
             self.tts = None
-        self.observer = None
+        ChannelBase.shutdown(self)
     
-    def _processQueue(self):
-        while (not self.busy) and len(self.queue):
-            # peek at the top command to see if it is deferred
-            cmd = self.queue[0]
-            reqid = cmd.get('deferred')
-            if reqid is not None:
-                # check if the deferred result is already available
-                result = self.deferreds.get(reqid)
-                if result is None:
-                    # store the current request ID
-                    self.stalled_id = reqid
-                    # and stall the queue for now
-                    return
-                else:
-                    # set the deferred result action to that of the original
-                    result['action'] = cmd['action']
-                    # remove the deferred from the list of deferreds
-                    del self.deferreds[reqid]
-                    # use the result instead of the original
-                    cmd = result
-            # handle the next command
-            self._handleCommand(cmd)
-            # remember to pop the command
-            cmd = self.queue.pop(0)
-
-    def _handleCommand(self, cmd):
-        action = cmd.get('action')
-        if action == 'say':
-            self.say(cmd)
-        elif action == 'play':
-            self.play(cmd)
-        elif action == 'set-queued':
-            self.setProperty(cmd)
-        elif action == 'get-config':
-            self.getConfig(cmd)
-        elif action == 'reset-queued':
-            self.reset()
-
-    def setObserver(self, ob):
-        self.observer = ob
-
-    def pushRequest(self, cmd):
-        action = cmd.get('action')
-        if action == 'stop':
-            # process stops immediately
-            self.stop()
-        elif action == 'set-now':
-            # process immediate property changes
-            self.setProperty(cmd)
-        elif action == 'reset-now':
-            # process immediate reset of all properties
-            self.reset()
-        elif action == 'deferred-result':
-            # process incoming deferred result
-            self.deferred(cmd)
-        else:
-            # queue command; slight waste of time if we immediately pull it back
-            # out again, but it's clean
-            self.queue.append(cmd)
-            # process the queue
-            self._processQueue()
-
-    def deferred(self, cmd):
-        try:
-            reqid = cmd['deferred']
-        except KeyError:
-            return
-        # put the deferred into holding
-        self.deferreds[reqid] = cmd
-        # check if this deferred is the one that stalled the pipe
-        if reqid == self.stalled_id:
-            # if so, pump the queue
-            self._processQueue()
-        # if not, just continue
-
     def reset(self):
         # reinitialize local config
         self._initializeConfig()
@@ -155,13 +67,7 @@ class ChannelController(NSObject):
             self.tts.stopSpeaking()
         if self.sound is not None:
             self.sound.stop()
-        # reset queue and flags 
-        self.queue = []
-        self.busy = False
-        self.name = None
-        # reset deferreds
-        self.stalled_id = None
-        self.deferreds = {}
+        ChannelBase.stop(self)
     
     def say(self, cmd):
         if not self.tts:
@@ -195,7 +101,8 @@ class ChannelController(NSObject):
         if not self.sound:
             # sound didn't initialize, abort
             self.observer.pushResponse({'action' : 'error',
-                                        'description' : 'bad sound url'});
+                                        'description' : 'bad sound url',
+                                        'url' : cmd['url']});
             return
         self.sound.setDelegate_(self)
         # set current properties
