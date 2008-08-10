@@ -21,6 +21,7 @@ utils.declare('outfox.CacheController', null, {
 	this.nsic = Components.interfaces.nsICache;
 	this.sess = cs.createSession('HTTP', this.nsic.STORE_ON_DISK,
 				     this.nsic.STREAM_BASED);
+	// @todo: need second session for non-stream based resources
 	this.reqid = 0;
     },
 
@@ -62,7 +63,9 @@ utils.declare('outfox.CacheController', null, {
 							  self.nsic.ACCESS_READ,
 							  cache_obs);
 			} catch (e) {
-			    logit(e);
+			    // still need to callback with null so deferred
+			    // requests can be fulfilled
+			    observer(url, null);
 			}
 		    }, 0);
 		} else {

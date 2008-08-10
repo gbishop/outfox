@@ -29,6 +29,10 @@ class ChannelController(NSObject):
             self.observer = None
             # queue of utterances
             self.queue = []
+            # deferred results
+            self.deferreds = {}
+            # latest deferred request id that stalled the queue
+            self.stalled_id = None
             # speech and sound players
             self.tts = None
             self.sound = None
@@ -60,9 +64,28 @@ class ChannelController(NSObject):
     
     def _processQueue(self):
         while (not self.busy) and len(self.queue):
-            cmd = self.queue.pop(0)
+            # peek at the top command to see if it is deferred
+            cmd = self.queue[0]
+            reqid = cmd.get('deferred')
+            if reqid is not None:
+                # check if the deferred result is already available
+                result = self.deferreds.get(reqid)
+                if result is None:
+                    # store the current request ID
+                    self.stalled_id = reqid
+                    # and stall the queue for now
+                    return
+                else:
+                    # set the deferred result action to that of the original
+                    result['action'] = cmd['action']
+                    # remove the deferred from the list of deferreds
+                    del self.deferreds[reqid]
+                    # use the result instead of the original
+                    cmd = result
             # handle the next command
             self._handleCommand(cmd)
+            # remember to pop the command
+            cmd = self.queue.pop(0)
 
     def _handleCommand(self, cmd):
         action = cmd.get('action')
@@ -91,12 +114,28 @@ class ChannelController(NSObject):
         elif action == 'reset-now':
             # process immediate reset of all properties
             self.reset()
+        elif action == 'deferred-result':
+            # process incoming deferred result
+            self.deferred(cmd)
         else:
             # queue command; slight waste of time if we immediately pull it back
             # out again, but it's clean
             self.queue.append(cmd)
             # process the queue
             self._processQueue()
+
+    def deferred(self, cmd):
+        try:
+            reqid = cmd['deferred']
+        except KeyError:
+            return
+        # put the deferred into holding
+        self.deferreds[reqid] = cmd
+        # check if this deferred is the one that stalled the pipe
+        if reqid == self.stalled_id:
+            # if so, pump the queue
+            self._processQueue()
+        # if not, just continue
 
     def reset(self):
         # reinitialize local config
@@ -120,6 +159,9 @@ class ChannelController(NSObject):
         self.queue = []
         self.busy = False
         self.name = None
+        # reset deferreds
+        self.stalled_id = None
+        self.deferreds = {}
     
     def say(self, cmd):
         if not self.tts:
@@ -142,9 +184,14 @@ class ChannelController(NSObject):
         self.observer.pushResponse(msg)
 
     def play(self, cmd):
-        # allocate a new sound object for each request
-        url = NSURL.URLWithString_(cmd['url'])
-        self.sound = NSSound.alloc().initWithContentsOfURL_byReference_(url, objc.NO)
+        fn = cmd.get('filename')
+        if fn is not None:
+            # allocate new sound object for file
+            self.sound = NSSound.alloc().initWithContentsOfFile_byReference_(fn, objc.NO)
+        else:
+            # allocate a new sound object for URL
+            url = NSURL.URLWithString_(cmd['url'])
+            self.sound = NSSound.alloc().initWithContentsOfURL_byReference_(url, objc.NO)
         if not self.sound:
             # sound didn't initialize, abort
             self.observer.pushResponse({'action' : 'error',

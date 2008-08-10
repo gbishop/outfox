@@ -77,12 +77,12 @@ utils.declare('outfox.PageController', null, {
 			// which can be paired with the original based on the
 			// deferred request id
 			cmd.action = 'deferred-result';
-			// set request 
-			// attach the filename
-			cmd.filename = filename;
+			if(filename) {
+			    // attach the filename, if it exists
+			    cmd.filename = filename;
+			}
 			// encode as json again
 			json = utils.toJson(cmd);
-			//logit(json);
 			// send the json using the proxy
 			self.proxy.send(self.id, json);
 		    }
@@ -91,13 +91,11 @@ utils.declare('outfox.PageController', null, {
 		    // mark command as deferred for now
 		    cmd.deferred = reqid;
 		    json = utils.toJson(cmd);
-		    //logit(json);
 		} else {
 		    // make the command with the local cached copy filename
 		    // in case the external server can make use of it instead
 		    cmd.filename = fn;
 		    json = utils.toJson(cmd);
-		    //logit(json);
 		}
 	    }
 
