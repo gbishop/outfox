@@ -26,18 +26,27 @@ utils.declare('outfox.CacheController', null, {
     },
 
     getLocalFilename: function(url) {
+	// get canonical url to match with cache
+	var uri = this.ios.newURI(url, null, null);
+	url = uri.asciiSpec;
 	try {
-	    var entry = this.sess.openCacheEntry(url, 
-		this.nsic.ACCESS_READ, this.nsic.BLOCKING);
+	    var entry = this.sess.openCacheEntry(url, this.nsic.ACCESS_READ,
+		this.nsic.BLOCKING);
 	} catch(e) {
 	    return null;
 	}
 	var target = entry.file.path;
+	logit('*** CACHE FILE', target);
 	entry.close();
 	return target;
     },
 
     fetch: function(url, observer) {
+	// get canonical url
+	var uri = this.ios.newURI(url, null, null);
+	url = uri.asciiSpec;
+	logit('*** FETCHING', url);
+
 	var reqid = this.reqid++;
 	var req = new XMLHttpRequest();
 	req.mozBackgroundRequest = true;
@@ -65,13 +74,13 @@ utils.declare('outfox.CacheController', null, {
 			} catch (e) {
 			    // still need to callback with null so deferred
 			    // requests can be fulfilled
-			    observer(url, null);
+			    observer(reqid, null);
 			}
 		    }, 0);
 		} else {
 		    // still need to callback with null as the filename so any
 		    // deferred requests can be fulfilled
-		    observer(url, null);
+		    observer(reqid, null);
 		}
 	    }
 	};
