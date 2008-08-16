@@ -20,7 +20,7 @@ import pymedia.muxer
 import Numeric
 import pygame.sndarray
 
-def MakeSound(fh):
+def MakeSound(fh, rate=44100, bits=16, channels=2):
     dm = pymedia.muxer.Demuxer('mp3')
     s = fh.read()
     frames = dm.parse(s)
@@ -32,6 +32,9 @@ def MakeSound(fh):
             seg = Numeric.fromstring(str(r.data), Numeric.Int16)
             segs.append(seg)
 
+    ch_mult = channels / r.channels
+    rate_mult = rate / r.sample_rate
     buff = Numeric.concatenate(segs)
-    buff = Numeric.reshape(Numeric.repeat(buff, 2/r.channels), (-1, 2))
+    buff = Numeric.reshape(Numeric.repeat(buff, int(rate_mult * ch_mult)),
+                           (-1, 2))
     return pygame.sndarray.make_sound(buff)
