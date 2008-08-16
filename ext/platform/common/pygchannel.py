@@ -59,6 +59,8 @@ class PygameChannelBase(ChannelBase):
         self.done_action = None
         # set config defaults
         self._initializeConfig()
+        # initialize engine
+        self._initializeEngine()
 
     def _initializeConfig(self):
         self.config = {}
@@ -250,10 +252,6 @@ class PygameChannelBase(ChannelBase):
         return snd
 
     def getConfig(self, cmd):
-        if not self.ready:
-            # initialize engine in the context of the main thread
-            self._initializeEngine()
-
         # add all voice names to config
         cfg = dict(voices=self._getVoices())
         cfg.update(self.config)

@@ -21,7 +21,7 @@ import socket
 
 DELIMITER = '\3'
 
-class JSONServer(asynchat.async_chat):
+class JSONServer(asynchat.async_chat, object):
     def __init__(self, port):
         asynchat.async_chat.__init__(self)
         self.observer = None

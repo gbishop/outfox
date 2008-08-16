@@ -19,11 +19,6 @@ import tts
 from common.pygchannel import PygameChannelBase, getChannelFromId
 
 class ChannelController(PygameChannelBase):
-    def __init__(self, ch_id):
-        # whether we're initialized or
-        self.ready = False
-        PygameChannelBase.__init__(self, ch_id)
-
     def _initializeConfig(self):
         PygameChannelBase._initializeConfig(self)
         self.config['voice'] = tts.DEFAULT_VOICE
@@ -33,8 +28,6 @@ class ChannelController(PygameChannelBase):
         # set tts defaults
         tts.SetVoiceByName(tts.DEFAULT_VOICE)
         tts.SetParameter(tts.RATE, self.config['rate'])
-        # set flag so we don't reinitialize on the next command
-        self.ready = True
 
     def _synthWords(self, text):
         return tts.SynthWords(text)
