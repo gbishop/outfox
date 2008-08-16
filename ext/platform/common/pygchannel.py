@@ -76,8 +76,7 @@ class PygameChannelBase(ChannelBase):
         pygame.mixer.set_num_channels(MAX_CHANNELS)
 
     def shutdown(self):
-        if self.player:
-            self.player.stop()
+        self.stop()
         ChannelBase.shutdown(self)
     
     def reset(self):
@@ -87,12 +86,12 @@ class PygameChannelBase(ChannelBase):
         self._initializeEngine()
 
     def stop(self):
-        if self.player:
-            self.player.stop()
-            self.player = None
         ChannelBase.stop(self)
         self.done_action = None
         self.words = []
+        if self.player:
+            self.player.stop()
+            self.player = None
     
     def say(self, cmd):
         # make sure the speech string isn't empty; adhere to protocol

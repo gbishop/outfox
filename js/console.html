@@ -1,0 +1,20 @@
+<html>
+  <head>
+    <script type="text/javascript" src="outfox.js"></script>
+    <script type="text/javascript">
+      var of, snd;
+      function onLoad(event) {
+          snd = window.location+'/../sounds/Contact_On.mp3';
+          outfox.init("outfox");
+          outfox.addObserver(console.debug, 0);
+          outfox.say('Outfox is ready');
+          of = outfox;
+      }
+    </script>
+  </head>
+  <body onload="onLoad();">
+    <h1>Outfox for Firebug</h1>
+    <p>Use the Firebug console to control Outfox on this page. The method <i>console.debug</i> is set as the callback for channel 0 responses. The <i>outfox</i> object is aliased for ease of typing as the variable <i>of</i>. The variable <i>snd</i> is set to the URL string <i>window.location+'/../sounds/Contact_On.mp3'<i> for testing sound.</p>
+    <div id="outfox"></div>
+  </body>
+</html>

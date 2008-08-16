@@ -41,12 +41,9 @@ class ChannelController(NSObject, ChannelBase):
         self.config['loop'] = False
 
     def shutdown(self):
-        if self.tts:
-            self.tts.stopSpeaking()
-            self.tts = None
-        if self.sound:
-            self.sound.stop()
-            self.tts = None
+        self.stop()
+        self.tts = None
+        self.sound = None
         ChannelBase.shutdown(self)
     
     def reset(self):
@@ -60,14 +57,14 @@ class ChannelController(NSObject, ChannelBase):
         if self.sound:
             # reset sound if it exists
             self.sound.setVolume_(self.config['volume'])
-            self.sound.setLoops_(self.config['loops'])
+            self.sound.setLoops_(self.config['loop'])
 
     def stop(self):
+        ChannelBase.stop(self)
         if self.tts is not None:
             self.tts.stopSpeaking()
         if self.sound is not None:
             self.sound.stop()
-        ChannelBase.stop(self)
     
     def say(self, cmd):
         if not self.tts:
