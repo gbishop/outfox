@@ -25,13 +25,13 @@ def SynthWords(tts, text, rate=44100, bits=16, channels=2):
     # split buffer into word chunks
     meta = [(e.CharacterPosition, e.Length, e.StreamPosition) 
             for e in events if e.EventType == tts_event_word]
-    start = meta[0][2]
+    start = (meta[0][2] & ~1)
     data = stream.GetData()
     # ignore silence before the first word
     x = len(meta) - 1
     if x >= 0:
         for i in xrange(x):
-            stream_pos = meta[i+1][2]
+            stream_pos = (meta[i+1][2] & ~1)
             # reshape as needed
             # @todo: correct for bits and rate
             buff = Numeric.fromstring(data[start:stream_pos], Numeric.Int16)
@@ -40,7 +40,8 @@ def SynthWords(tts, text, rate=44100, bits=16, channels=2):
             words.append((snd, meta[i][0], meta[i][1]))
             start = stream_pos
         # @todo: correct for bits and rate
-        buff = Numeric.fromstring(data[start:], Numeric.Int16)
+        end = (len(data) & ~1)
+        buff = Numeric.fromstring(data[start:end], Numeric.Int16)
         buff = Numeric.reshape(Numeric.repeat(buff, channels), (-1, 2))
         snd = pygame.sndarray.make_sound(buff)
         words.append((snd, meta[x][0], meta[x][1]))
