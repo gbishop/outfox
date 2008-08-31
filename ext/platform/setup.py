@@ -29,9 +29,8 @@ dll_excludes = [
     'SDL_image.dll',
     'SDL_ttf.dll'
     ]
-# @todo: check list against pygame/__init__.py
+
 excludes = [
-    'unicodedata',
     'bz2',
     '_ssl',
     '_hashlib',
