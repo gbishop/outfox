@@ -22,9 +22,19 @@ try:
 except ImportError:
     pass
 
-dll_excludes = []
+dll_excludes = [
+    'jpeg.dll',
+    'libtiff.dll',
+    'libpng13.dll',
+    'SDL_image.dll',
+    'SDL_ttf.dll'
+    ]
 # @todo: check list against pygame/__init__.py
 excludes = [
+    'unicodedata',
+    'bz2',
+    '_ssl',
+    '_hashlib',
     'pygame.cdrom', 
     'pygame.draw', 
     'pygame.key',
@@ -50,7 +60,7 @@ typelibs = [('{C866CA3A-32F7-11D2-9602-00C04F8EE628}', 0, 5, 0)]
 packages = ['encodings', 'win32']
 
 setup(console=["outfox.py"],
-      version='0.1',
+      version='0.1.1',
       options={"py2exe": {"compressed": 1,
                           'optimize': 2,
                           'excludes' : excludes,
