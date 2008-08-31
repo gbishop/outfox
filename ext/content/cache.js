@@ -36,7 +36,7 @@ utils.declare('outfox.CacheController', null, {
 	    return null;
 	}
 	var target = entry.file.path;
-	logit('*** CACHE FILE', target);
+	//logit('*** CACHE FILE', target);
 	entry.close();
 	return target;
     },
@@ -45,7 +45,7 @@ utils.declare('outfox.CacheController', null, {
 	// get canonical url
 	var uri = this.ios.newURI(url, null, null);
 	url = uri.asciiSpec;
-	logit('*** FETCHING', url);
+	//logit('*** FETCHING', url);
 
 	var reqid = this.reqid++;
 	var req = new XMLHttpRequest();
