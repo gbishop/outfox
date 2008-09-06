@@ -122,3 +122,7 @@ class ChannelBase(object):
 
     def shutdown(self):
         self.observer = None
+
+    def _notify(self, msg):
+        if self.observer is not None:
+            self.observer.pushResponse(msg)

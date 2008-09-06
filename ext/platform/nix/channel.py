@@ -16,7 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import tts
-from common.pygchannel import PygameChannelBase, getChannelFromId
+from common.pygchannel import *
 
 class ChannelController(PygameChannelBase):
     def _initializeConfig(self):

@@ -84,7 +84,7 @@ class ChannelController(NSObject, ChannelBase):
         msg = {'channel' : self.id, 'action' : 'started-say'}
         if self.name is not None:
             msg['name'] = self.name
-        self.observer.pushResponse(msg)
+        self._notify(msg)
 
     def play(self, cmd):
         fn = cmd.get('filename')
@@ -97,9 +97,9 @@ class ChannelController(NSObject, ChannelBase):
             self.sound = NSSound.alloc().initWithContentsOfURL_byReference_(url, objc.NO)
         if not self.sound:
             # sound didn't initialize, abort
-            self.observer.pushResponse({'action' : 'error',
-                                        'description' : 'bad sound url',
-                                        'url' : cmd['url']});
+            self._notify({'action' : 'error',
+                          'description' : 'bad sound url',
+                          'url' : cmd['url']});
             return
         self.sound.setDelegate_(self)
         # set current properties
@@ -113,15 +113,15 @@ class ChannelController(NSObject, ChannelBase):
         msg = {'channel' : self.id, 'action' : 'started-play'}
         if self.name is not None:
             msg['name'] = self.name
-        self.observer.pushResponse(msg)
+        self._notify(msg)
 
     def getConfig(self, cmd):
         # add all voice names to config
         cfg = dict(voices=list(NSSpeechSynthesizer.availableVoices()))
         cfg.update(self.config)
-        self.observer.pushResponse({'action' : 'set-config',
-                                    'channel' : self.id,
-                                    'config' : cfg})
+        self._notify({'action' : 'set-config',
+                      'channel' : self.id,
+                      'config' : cfg})
 
     def setProperty(self, cmd):
         name = cmd['name']
@@ -149,17 +149,17 @@ class ChannelController(NSObject, ChannelBase):
         # store in config so we can refer to it later
         self.config[name] = val
         # notify observer
-        self.observer.pushResponse({'channel' : self.id, 
-                                    'action' : 'set-property',
-                                    'name' : name,
-                                    'value' : val})
+        self._notify({'channel' : self.id, 
+                      'action' : 'set-property',
+                      'name' : name,
+                      'value' : val})
 
     def speechSynthesizer_didFinishSpeaking_(self, tts, success):
         msg = {'channel' : self.id, 'action' : 'finished-say'}
         if self.name is not None:
             msg['name'] = self.name
         # notify the observer
-        self.observer.pushResponse(msg)
+        self._notify(msg)
         # reset stateful data
         self.busy = False
         self.name = None
@@ -174,7 +174,7 @@ class ChannelController(NSObject, ChannelBase):
             msg['name'] = self.name
         # notify the observer
         if self.observer:
-            self.observer.pushResponse(msg)
+            self._notify(msg)
         # reset stateful data
         self.busy = False
         self.name = None
@@ -188,4 +188,4 @@ class ChannelController(NSObject, ChannelBase):
             msg['name'] = self.name
         # notify the observer
         if self.observer:
-            self.observer.pushResponse(msg)
+            self._notify(msg)

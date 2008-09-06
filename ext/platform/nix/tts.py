@@ -20,20 +20,28 @@ import Numeric
 import pygame.sndarray
 
 # init speech synth
-SAMPLING_RATE = Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 500)
+ESPEAK_RATE = Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 500)
 # get default voice
 DEFAULT_VOICE = GetCurrentVoice().contents.name
+# seems to be fixed
+ESPEAK_BITS = 16
+ESPEAK_CHANNELS = 1 
 
-def SynthWords(text, rate=44100, bits=16, channels=2):
+def SynthWords(text, mixer_rate=44100, mixer_bits=16, mixer_channels=2):
+    # stores bytes
     chunks = []
+    # stores 3-tuples of text position, text length, and sample position
     meta = []
+    # consider difference between espeak rate, bits, and channels and the mixer
+    # rate, bits, and channels
+    rate_mult = mixer_rate/ESPEAK_RATE
+    bits_mult = mixer_bits/ESPEAK_BITS
+    ch_mult = mixer_channels/ESPEAK_CHANNELS
 
-    bit_mult = bits / 8
-    
     def synth_cb(wav, numsample, events):
         if numsample > 0:
-            # 16 bit samples
-            chunk = ctypes.string_at(wav, numsample*bit_mult)
+            # always 16 bit samples
+            chunk = ctypes.string_at(wav, numsample*2)
             chunks.append(chunk)
         # store all events for later processing
         i = 0
@@ -44,40 +52,21 @@ def SynthWords(text, rate=44100, bits=16, channels=2):
             elif event.type == EVENT_WORD:
                 # position seems to be 1 based, not 0
                 meta.append((event.text_position-1, event.length, 
-                             event.sample*bit_mult))
+                             event.sample * rate_mult))
             i += 1
         return 0
 
+    # register the callback and do the synthesis
     SetSynthCallback(synth_cb)
     Synth(text)
 
-    rate_mult = rate/SAMPLING_RATE
+    # make sure we synthed at least one word
+    if len(meta) == 0:
+        return None, []
 
-    # split into word chunks
-    words = []
-    data = ''.join(chunks)
-    start = meta[0][2]
-    x = len(meta) - 1
-    if x >= 0:
-        for i in xrange(x):
-            stream_pos = meta[i+1][2]
-            # reshape as needed
-            # @todo: correct for bits
-            buff = Numeric.fromstring(data[start:stream_pos], Numeric.Int16)
-            buff = Numeric.reshape(Numeric.repeat(buff, rate_mult*channels), 
-                                   (-1, 2))
-            snd = pygame.sndarray.make_sound(buff)
-            words.append((snd, meta[i][0], meta[i][1]))
-            start = stream_pos
-        # @todo: correct for bits
-        buff = Numeric.fromstring(data[start:], Numeric.Int16)
-        buff = Numeric.reshape(Numeric.repeat(buff, rate_mult*channels), 
-                               (-1, 2))
-        snd = pygame.sndarray.make_sound(buff)
-        words.append((snd, meta[x][0], meta[x][1]))
-    else:
-        # nothing to speak, so fake a word
-        words.append((None, None, None))
-
-    return words
-
+    # create a sound from the data
+    buff = Numeric.fromstring(''.join(chunks), Numeric.Int16)
+    buff = Numeric.repeat(buff, rate_mult*ch_mult*bits_mult)
+    buff = Numeric.reshape(buff, (-1, 2))
+    snd = pygame.sndarray.make_sound(buff)
+    return snd, meta

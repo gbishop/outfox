@@ -42,12 +42,14 @@ def run():
     # pygame event loop
     while 1:
         # poll asyncore
-        asyncore.poll(0.005)
+        asyncore.poll(0.05)
         # look for an event
         event = pygame.event.poll()
         if event.type == pygame.NOEVENT:
-            # nothing to read
-            continue
+            chs = channel.getBusyChannels()
+            if len(chs):
+                # tick all channels that need busy callbacks
+                [ch.onBusyTick() for ch in chs]
         elif event.type == pygame.locals.QUIT:
             # exit the event loop
             return
@@ -56,7 +58,8 @@ def run():
             # pass them to channel based on event type 
             # would be much easier if we could specify sound event properties...
             ch = channel.getChannelFromId(event.type)
-            try:
-                ch.onPlayerComplete()
-            except Exception, e:
-                print e
+            if ch is not None:
+                try:
+                    ch.onPlayerComplete()
+                except Exception, e:
+                    print e

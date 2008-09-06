@@ -19,34 +19,32 @@ from pyTTS import *
 import Numeric
 import pygame.sndarray
 
-def SynthWords(tts, text, rate=44100, bits=16, channels=2):
-    words = []
+def SynthWords(tts, text, mixer_rate=44100, mixer_bits=16, mixer_channels=2):
+    # synthesize speech and events
     stream, events = tts.Speak(text)
-    # split buffer into word chunks
-    meta = [(e.CharacterPosition, e.Length, e.StreamPosition) 
-            for e in events if e.EventType == tts_event_word]
-    start = (meta[0][2] & ~1)
-    data = stream.GetData()
-    # ignore silence before the first word
-    x = len(meta) - 1
-    if x >= 0:
-        for i in xrange(x):
-            stream_pos = (meta[i+1][2] & ~1)
-            # reshape as needed
-            # @todo: correct for bits and rate
-            buff = Numeric.fromstring(data[start:stream_pos], Numeric.Int16)
-            buff = Numeric.reshape(Numeric.repeat(buff, channels), (-1, 2))
-            snd = pygame.sndarray.make_sound(buff)
-            words.append((snd, meta[i][0], meta[i][1]))
-            start = stream_pos
-        # @todo: correct for bits and rate
-        end = (len(data) & ~1)
-        buff = Numeric.fromstring(data[start:end], Numeric.Int16)
-        buff = Numeric.reshape(Numeric.repeat(buff, channels), (-1, 2))
-        snd = pygame.sndarray.make_sound(buff)
-        words.append((snd, meta[x][0], meta[x][1]))
-    else:
-        # nothing to speak, so insert a sentinel
-        words.append((None, None, None))
-    return words
 
+    # make sure we synthed at least one word
+    if len(events) == 0:
+        return None, []
+
+    # get the waveform format information
+    format = stream.Format.GetWaveFormatEx()
+
+    # consider difference between espeak rate, bits, and channels and the mixer
+    # rate, bits, and channels
+    rate_mult = mixer_rate/format.SamplesPerSec
+    bits_mult = mixer_bits/format.BitsPerSample
+    ch_mult = mixer_channels/format.Channels
+
+    # correct metadata for new sampling rate
+    # @todo: note sure what StreamPosition units are in general, just using 
+    #   what works from experimentation
+    meta = [(e.CharacterPosition, e.Length, e.StreamPosition / ch_mult)
+            for e in events if e.EventType == tts_event_word]
+
+    # create a sound from the data
+    buff = Numeric.fromstring(stream.GetData(), Numeric.Int16)
+    buff = Numeric.repeat(buff, rate_mult*ch_mult*bits_mult)
+    buff = Numeric.reshape(buff, (-1, 2))
+    snd = pygame.sndarray.make_sound(buff)
+    return snd, meta
