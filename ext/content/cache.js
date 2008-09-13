@@ -35,8 +35,10 @@ utils.declare('outfox.CacheController', null, {
 	} catch(e) {
 	    return null;
 	}
+	// this may throw an exception; if it does, it means this item will
+	// never be available in the disk cache
 	var target = entry.file.path;
-	//logit('*** CACHE FILE', target);
+//	logit('*** CACHE FILE', target);
 	entry.close();
 	return target;
     },
@@ -45,7 +47,7 @@ utils.declare('outfox.CacheController', null, {
 	// get canonical url
 	var uri = this.ios.newURI(url, null, null);
 	url = uri.asciiSpec;
-	//logit('*** FETCHING', url);
+//	logit('*** FETCHING', url);
 
 	var reqid = this.reqid++;
 	var req = new XMLHttpRequest();
@@ -56,12 +58,19 @@ utils.declare('outfox.CacheController', null, {
 	//  cache entry is still held open by the xhr in there (deadlock!)
 	var cache_obs = {
 	    onCacheEntryAvailable: function(entry, access, status) {
+		try {
+		    var target = entry.file.path;
+		} catch(e) {
+		    // not cacheable, so make filename null
+		    var target = null;
+		}
 		// invoke the external observer with the filename
-		observer(reqid, entry.file.path);
+		observer(reqid, target);
 	    }
 	};
 	var self = this;
 	req.onreadystatechange = function(event) {
+//	    logit('ready state change', req.readyState);
 	    if(req.readyState == 4) {
 		// http gives 200 on success, ftp or file gives 0
 		if(req.status == 200 || req.status == 0) {

@@ -66,13 +66,20 @@ utils.declare('outfox.PageController', null, {
 	    var cmd = utils.fromJson(json);
 
 	    if(cmd.url) {
+		var fn;
 		// check if url is cached
-		var fn = this.cache.getLocalFilename(cmd.url);
-		if(!fn) {
+		try {
+		    fn = this.cache.getLocalFilename(cmd.url);
+		} catch(e) {
+		    // any exception here means the file isn't cacheable
+		    // leave fn undefined
+		}
+		if(fn === null) {
 		    // define a callback for when the prefetch completes and
 		    // the cache entry is opened for filename access
 		    var self = this;
 		    var obs = function(reqid, filename) {
+//			logit('async fetch complete');
 			// change the action to indicate a deferred result
 			// which can be paired with the original based on the
 			// deferred request id
@@ -91,7 +98,7 @@ utils.declare('outfox.PageController', null, {
 		    // mark command as deferred for now
 		    cmd.deferred = reqid;
 		    json = utils.toJson(cmd);
-		} else {
+		} else if(fn != undefined){
 		    // make the command with the local cached copy filename
 		    // in case the external server can make use of it instead
 		    cmd.filename = fn;
