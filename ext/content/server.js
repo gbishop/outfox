@@ -100,20 +100,22 @@ utils.declare('outfox.ServerProxy', null, {
     _notify: function(page_id, json) {
 	if (page_id != '*') {
 	    // message for one page
-	    var pages = [this.observers[page_id]];
-	} else {
-	    // message for all pages
-	    var pages = this.observers;
-	    // message to all pages can only mean failure, so set the flag
-	    this.failed = json;
-	}
-	// notify all pages
-	for(var page_id in this.observers) {
-	    var ob = this.observers[page_id];
 	    try {
-		ob(json);
+		this.observers[page_id](json);
 	    } catch(e) {
 		//logit('ServerProxy: notify failure', e);
+	    }
+	} else {
+	    // message to all pages can only mean failure, so set the flag
+	    this.failed = json;
+	    // notify all pages
+	    for(var page_id in this.observers) {
+		var ob = this.observers[page_id];
+		try {
+		    ob(json);
+		} catch(e) {
+		    //logit('ServerProxy: notify all failure', e);
+		}
 	    }
 	}
     },

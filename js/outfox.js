@@ -46,7 +46,7 @@ var outfox = {
         this.ready_cb = ready_cb;
         // monitor for incoming events
         this.token = outfox.utils.connect(this.in_dom, 'DOMNodeInserted',
-					     this, '_onResponse');
+					  this, '_onResponse');
         // configuration by channel
         this.config = {};
         // defaults for a channel when created
