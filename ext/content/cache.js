@@ -38,7 +38,7 @@ utils.declare('outfox.CacheController', null, {
 	// this may throw an exception; if it does, it means this item will
 	// never be available in the disk cache
 	var target = entry.file.path;
-//	logit('*** CACHE FILE', target);
+	logit('*** CACHE FILE', target);
 	entry.close();
 	return target;
     },
@@ -47,7 +47,7 @@ utils.declare('outfox.CacheController', null, {
 	// get canonical url
 	var uri = this.ios.newURI(url, null, null);
 	url = uri.asciiSpec;
-//	logit('*** FETCHING', url);
+	logit('*** FETCHING', url);
 
 	var reqid = this.reqid++;
 	var req = new XMLHttpRequest();
@@ -64,13 +64,14 @@ utils.declare('outfox.CacheController', null, {
 		    // not cacheable, so make filename null
 		    var target = null;
 		}
+		logit('invoking observer with filename:', target);
 		// invoke the external observer with the filename
 		observer(reqid, target);
 	    }
 	};
 	var self = this;
 	req.onreadystatechange = function(event) {
-//	    logit('ready state change', req.readyState);
+	    logit('ready state change', req.readyState);
 	    if(req.readyState == 4) {
 		// http gives 200 on success, ftp or file gives 0
 		if(req.status == 200 || req.status == 0) {
@@ -80,15 +81,18 @@ utils.declare('outfox.CacheController', null, {
 			    self.sess.asyncOpenCacheEntry(url, 
 							  self.nsic.ACCESS_READ,
 							  cache_obs);
+			    logit('opened cache entry');
 			} catch (e) {
 			    // still need to callback with null so deferred
 			    // requests can be fulfilled
+			    logit('failed to open cache entry');
 			    observer(reqid, null);
 			}
 		    }, 0);
 		} else {
 		    // still need to callback with null as the filename so any
 		    // deferred requests can be fulfilled
+		    logit('failed to fetch');
 		    observer(reqid, null);
 		}
 	    }

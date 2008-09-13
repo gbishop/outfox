@@ -73,13 +73,13 @@ utils.declare('outfox.PageController', null, {
 		} catch(e) {
 		    // any exception here means the file isn't cacheable
 		    // leave fn undefined
+		    logit('cache entry exists, but file not on disk');
 		}
 		if(fn === null) {
 		    // define a callback for when the prefetch completes and
 		    // the cache entry is opened for filename access
 		    var self = this;
 		    var obs = function(reqid, filename) {
-//			logit('async fetch complete');
 			// change the action to indicate a deferred result
 			// which can be paired with the original based on the
 			// deferred request id
