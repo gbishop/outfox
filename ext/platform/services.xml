@@ -1,0 +1,20 @@
+<services xmlns="http://code.google.com/p/outfox">
+  <service name="audio">
+    <executable path="outfox.py">
+      <arg value="audio" />
+    </executable>
+    <executable path="dist/outfox.exe">
+      <arg value="audio" />
+    </executable>
+  </service>
+  <!--
+      <service name="joystick">
+      <executable path="outfox.py">
+      <arg value="joystick" />
+      </executable>
+      <executable path="dist/outfox.exe">
+      <arg value="joystick" />
+      </executable>
+      </service>
+  -->
+</services>

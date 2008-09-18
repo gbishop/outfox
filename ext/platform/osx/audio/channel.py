@@ -16,7 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import objc
-from common.channel import ChannelBase
+from common.audio.channel import ChannelBase
 from Foundation import *
 from AppKit import *
 

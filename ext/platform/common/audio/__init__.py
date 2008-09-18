@@ -1,5 +1,5 @@
 '''
-Root package for Python OS X services.
+Common platform files for audio.
 
 Copyright (c) 2008 Carolina Computer Assistive Technology
 

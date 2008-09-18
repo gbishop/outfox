@@ -1,5 +1,5 @@
 '''
-Root package for Python OS X services.
+Cocoa-based socket server, speech, and sound for OS X 10.5 and higher.
 
 Copyright (c) 2008 Carolina Computer Assistive Technology
 
@@ -15,4 +15,23 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-# nothing to do except exist ...
+from ..server import JSONServer
+from common.audio.page import PageController
+from channel import ChannelController
+from PyObjCTools import AppHelper
+
+def buildServer(module, port):
+    return JSONServer.alloc().initWithPort_(port)
+
+def buildPage(module, page_id):
+    return PageController(page_id, module)
+
+def buildChannel(module, ch_id):
+    return ChannelController.alloc().initWithId_(ch_id)
+
+def run(module):
+    # enter the main event loop
+    AppHelper.runConsoleEventLoop()
+
+def shutdown(module):
+    AppHelper.stopEventLoop()

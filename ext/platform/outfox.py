@@ -19,15 +19,15 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import simplejson
 import socket
 import sys
-from page import PageController
 
 DELIMITER = '\3'
 
 class Outfox(object):
-    def __init__(self, port):
+    def __init__(self, port, service):
         # map page IDs to page controllers
         self.pages = {}
         self.port = port
+        self.service = service
         self.module = None
 
     def run(self):
@@ -38,14 +38,14 @@ class Outfox(object):
             raise NotImplementedError('platform not supported')
 
         # launch the socket server
-        self.server = self.module.buildServer(self.port)
+        self.server = self.module.buildServer(self.module, self.port)
         # observe socket server messages so we can dispatch
         self.server.setObserver(self)
         # let the server connect
         self.server.doConnect()
 
         # let the module dictate what happens next
-        self.module.run()
+        self.module.run(self.module)
         print 'Outfox quit'
 
     def fail(self):
@@ -58,7 +58,7 @@ class Outfox(object):
         s.sendall(msg+DELIMITER)
 
     def shutdown(self):
-        self.module.shutdown()
+        self.module.shutdown(self.module)
 
     def pushRequest(self, json):
         # decode the json
@@ -79,7 +79,7 @@ class Outfox(object):
             try:
                 page = self.pages[page_id]
             except KeyError:
-                page = PageController(page_id, self.module)
+                page = self.module.buildPage(self.module, page_id)
                 # register for responses for the page
                 page.setObserver(self)
                 self.pages[page_id] = page
@@ -87,6 +87,8 @@ class Outfox(object):
             page.pushRequest(cmd)
 
     def pushResponse(self, page_id, cmd):
+        # add service name to the command
+        cmd['service'] = self.service
         # encode as json
         msg = simplejson.dumps({'page_id' : page_id, 'cmd' : cmd})
         # send using the server
@@ -101,22 +103,20 @@ class Outfox(object):
             pkg = 'nix'
         module = None
         try:
-            module = __import__(pkg)
+            name = '%s.%s' % (pkg, self.service)
+            module = __import__(name, globals(), locals(), [self.service])
         except Exception, e:
             print 'import failed', e
-            pass
         return module
 
 def main():
     import sys
-    # enable printing to a file on Windows
-    if sys.platform == 'win32':
-        sys.stdout = sys.stderr = open('c:/windows/temp/outfox.log', 'wt')
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception
     port = int(sys.argv[1])
+    service = sys.argv[2]
     # create the main controller
-    fs = Outfox(port)
+    fs = Outfox(port, service)
     fs.run()
 
 if __name__ == "__main__":

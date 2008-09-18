@@ -1,5 +1,5 @@
 '''
-Controller for a single document using Firesound.
+Controller for a single page with multiple audio channels.
 
 Copyright (c) 2008 Carolina Computer Assistive Technology
 
@@ -38,7 +38,7 @@ class PageController(object):
             ch = self.channels[ch_id]
         except KeyError:
             # build a new channel
-            ch = self.module.buildChannel(ch_id)
+            ch = self.module.buildChannel(self.module, ch_id)
             ch.setObserver(self)
             self.channels[ch_id] = ch
         ch.pushRequest(cmd)

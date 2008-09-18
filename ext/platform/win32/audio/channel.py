@@ -17,7 +17,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import math
 import tts
-from common.pygchannel import *
+from common.audio.pygchannel import *
 # exponential regression for wpm; MSMary values used as defaults for unknown
 # voices
 E_REG = {'MSSam' : (137.89, 1.11),
