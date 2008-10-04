@@ -26,7 +26,7 @@ var outfox = {
     init: function(box, encoder, decoder) {
 	// observers for callbacks by service
 	this.observers = {};
-        // services and their JS interfaces or deferreds
+        // deferreds for service start by service name
         this.services = {};
 
         // json encode/decode
@@ -146,13 +146,13 @@ var outfox = {
 	var node = event.target;
 	var cmd = this.decoder(node.innerHTML);
         // handle service start, stop, fail
-        if(cmd.action == 'service-started') {
+        if(cmd.action == 'started-service') {
             this._onServiceStarted(cmd);
             return;
-        } else if(cmd.action == 'service-failed') {
+        } else if(cmd.action == 'failed-service') {
             this._onServiceFailed(cmd);
             return;
-        } else if(cmd.action == 'service-stopped') {
+        } else if(cmd.action == 'stopped-service') {
             this._onServiceStopped(cmd);
             return;
         }
@@ -189,7 +189,11 @@ var outfox = {
         var script = document.createElement('script');
         var head = document.getElementsByTagName('head');
         head.appendChild(script);
-        script.textContent = cmd.extension;
+	// add the extension to the outfox object under the service name
+	// invoke its init method when the script tag runs it
+	// the extension must call _onServiceExtensionReady or _onServiceFailed
+	// on this object after initialization
+        script.textContent = 'outfox.'+cmd.service+' = {'+cmd.extension+'}; outfox.'+cmd.service+'.init()';
         
         // hang onto the script node for removal
         def.script = script;
@@ -221,6 +225,10 @@ var outfox = {
         if(def != undefined) {
             def.errback(cmd);
         }
+	// clean up the service
+	if(def.script) {
+	    this._onServiceStopped(cmd);
+	}
     },
 
     /**

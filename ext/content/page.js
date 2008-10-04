@@ -14,11 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  * */
 utils.declare('outfox.PageController', null, {
-    constructor: function(id, doc, div, proxy) {
+    constructor: function(id, doc, factory) {
         this.id = id;
 	this.doc = doc;
-        this.div = div;
-        this.proxy = proxy;
+	this.factory = factory;
 
 	// create cache session
 	this.cache = new outfox.CacheController();
@@ -32,30 +31,25 @@ utils.declare('outfox.PageController', null, {
 	    throw new Error('invalid outfox node');
 	}
 
-        // watch for additions to the outgoing queues
+        // watch for additions to the outgoing queuesb
         this.tokens = [];
         this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted',
                                        this, '_onRequest'));
 
+	// run through everything in the outgoing queue and process it 
+	// immediately
+
 	// register for incoming responses
-	this.proxy.addObserver(this.id, utils.bind(this, this._onResponse));
+	//this.proxy.addObserver(this.id, utils.bind(this, this._onResponse));
 
-        // send initial request for defaults, voices, etc.
-	// this has the desired side effect of creating the default channel and
-	// causing a response to be sent to the in-page JS indicating the server
-	// is ready
-        this.proxy.send(this.id, '{"action" : "get-config"}');
-
-        //logit('PageController: initialized');
+        logit('PageController: initialized');
     },
 
     shutdown: function() {
         // unregister all listeners
         this.tokens.forEach(utils.disconnect);
 	// stop listening to responses from proxy
-	this.proxy.removeObserver(this.id);
-        // send a final destroy message for the page
-        this.proxy.send(this.id, '{"action" : "shutdown"}');
+	//this.proxy.removeObserver(this.id);
     },
 
     _onRequest: function(event) {
@@ -65,7 +59,14 @@ utils.declare('outfox.PageController', null, {
 	    var json = node.nodeValue;
 	    var cmd = utils.fromJson(json);
 
-	    if(cmd.url) {
+	    if(cmd.action == 'start-service') {
+		// service start request
+		this.factory.startService(this.id, cmd);
+	    } else if(cmd.action == 'stop-service') {
+		// service stop request
+		this.factory.stopService(this.id, cmd);
+	    } else if(cmd.url) {
+		// request containing a URL that we might be able to cache
 		var fn;
 		// check if url is cached
 		try {
@@ -88,28 +89,24 @@ utils.declare('outfox.PageController', null, {
 			    // attach the filename, if it exists
 			    cmd.filename = filename;
 			}
-			// encode as json again
-			json = utils.toJson(cmd);
-			// send the json using the proxy
-			self.proxy.send(self.id, json);
+			// send the command to the proper service
+			self.factory.send(self.id, cmd);
 		    }
 		    // prefetch url
 		    var reqid = this.cache.fetch(cmd.url, obs);
 		    // mark command as deferred for now
 		    cmd.deferred = reqid;
-		    json = utils.toJson(cmd);
 		} else if(fn != undefined){
 		    // make the command with the local cached copy filename
 		    // in case the external server can make use of it instead
 		    cmd.filename = fn;
-		    json = utils.toJson(cmd);
 		}
 	    }
 
 	    // destroy request node
 	    this.out_queue.removeChild(node);
 	    // send the json using the proxy
-	    this.proxy.send(this.id, json);
+	    this.factory.send(this.id, cmd);
 	}
     },
 

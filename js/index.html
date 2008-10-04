@@ -13,11 +13,19 @@
       height: 100px;
     }
     </style>
+    <script type="text/javascript" src="json2.js"></script>
     <script type="text/javascript" src="outfox.js"></script>
     <script type="text/javascript">
 function onLoad(event) {
-    outfox.init("box", onPageReady);
-    outfox.say('Greetings from Outfox!');
+    outfox.init("box", JSON.stringify, JSON.parse);
+    var def = outfox.startService("audio");
+    def.addCallback(function(cmd) {
+        outfox.audio.say('Greetings from Outfox!');
+        enableButtons(true);
+    });
+    def.addErrback(function(cmd) {
+        document.byId('box').innerHTML = cmd.description;
+    });
 }
 
 function enableButtons(run, stop) {
@@ -32,45 +40,41 @@ function enableButtons(run, stop) {
     }
 }
 
-function onPageReady() {
-    enableButtons(true);
-}
-
 function test1(button) {
     enableButtons(false);
     var node = document.getElementById('test1-text');
-    var token = outfox.addObserver(function(tts, cmd) {
+    var token = outfox.audio.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-say') {
             enableButtons(true);
             tts.removeObserver(token);
         }
     });
-    outfox.say(node.innerHTML);
+    outfox.audio.say(node.innerHTML);
     
 }
 
 function test2(button) {
     enableButtons(false);
-    var token = outfox.addObserver(function(tts, cmd) {
+    var token = outfox.audio.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-play') {
 	    enableButtons(true);
             tts.removeObserver(token);
         }
     });
-    outfox.play(window.location.href+'sounds/Message_Received.mp3');
+    outfox.audio.play(window.location.href+'sounds/Message_Received.mp3');
 }
 
 function test3(button) {
     var node = document.getElementById('test3-text');
     enableButtons(false);
-    var token = outfox.addObserver(function(tts, cmd) {
+    var token = outfox.audio.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-play') {
 	    enableButtons(true);
             tts.removeObserver(token);
         }
     });
-    outfox.say(node.innerHTML);
-    outfox.play(window.location.href+'sounds/Message_Received.mp3');
+    outfox.audio.say(node.innerHTML);
+    outfox.audio.play(window.location.href+'sounds/Message_Received.mp3');
 }
 
 function test4(button) {
@@ -87,16 +91,16 @@ function test4(button) {
             tts.removeObserver(token_sound);
         }
     }
-    var token_speech = outfox.addObserver(callback);
-    var token_sound =  outfox.addObserver(callback, 1);
-    outfox.say(node.innerHTML);
-    outfox.play(window.location.href+'sounds/Message_Received.mp3', 1);
+    var token_speech = outfox.audio.addObserver(callback);
+    var token_sound =  outfox.audio.addObserver(callback, 1);
+    outfox.audio.say(node.innerHTML);
+    outfox.audio.play(window.location.href+'sounds/Message_Received.mp3', 1);
 }
 
 function test5(button) {
     enableButtons(false);
     var count = 0;
-    var token = outfox.addObserver(function(tts, cmd) {
+    var token = outfox.audio.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-say') {
             if(count == 0) {
                 count++;
@@ -106,28 +110,28 @@ function test5(button) {
             }
         }
     });
-    outfox.setProperty('rate', 100);
-    outfox.setProperty('volume', 0.3);
+    outfox.audio.setProperty('rate', 100);
+    outfox.audio.setProperty('volume', 0.3);
     var node = document.getElementById('test5-text1');
-    outfox.say(node.innerHTML);
-    outfox.setProperty('rate', 500);
-    outfox.setProperty('volume', 1.0);
+    outfox.audio.say(node.innerHTML);
+    outfox.audio.setProperty('rate', 500);
+    outfox.audio.setProperty('volume', 1.0);
     var node = document.getElementById('test5-text2');
-    outfox.say(node.innerHTML);
-    outfox.reset();
+    outfox.audio.say(node.innerHTML);
+    outfox.audio.reset();
 }
 
 function test6(button) {
     enableButtons(false, true);
-    outfox.setProperty('loop', true);
-    outfox.play(window.location.href+'sounds/Message_Received.mp3');
+    outfox.audio.setProperty('loop', true);
+    outfox.audio.play(window.location.href+'sounds/Message_Received.mp3');
 }
 
 function test6Stop() {
     var button = document.getElementById('test6-button');
     enableButtons(true, false);
-    outfox.stop();
-    outfox.reset();
+    outfox.audio.stop();
+    outfox.audio.reset();
 }
 
 function test7(button) {
@@ -145,17 +149,17 @@ function test7(button) {
             tts.removeObserver(token_sound);
         }
     }
-    var token_speech = outfox.addObserver(callback, 0);
-    var token_sound =  outfox.addObserver(callback, 1);
+    var token_speech = outfox.audio.addObserver(callback, 0);
+    var token_sound =  outfox.audio.addObserver(callback, 1);
     var node = document.getElementById('test7-text');
-    outfox.say(node.innerHTML, 0, 'my speech name');
-    outfox.play(window.location.href+'sounds/Message_Received.mp3', 1, 'my sound name');
+    outfox.audio.say(node.innerHTML, 0, 'my speech name');
+    outfox.audio.play(window.location.href+'sounds/Message_Received.mp3', 1, 'my sound name');
 }
 
 function test8(button) {
     enableButtons(false);
     var count = 0;
-    var token = outfox.addObserver(function(tts, cmd) {
+    var token = outfox.audio.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-play') {
 	    ++count;
 	    if(count == 3) {
@@ -164,9 +168,9 @@ function test8(button) {
 	    }
         }
     });
-    outfox.play(window.location.href+'sounds/Contact_On.mp3');
-    outfox.play(window.location.href+'sounds/Contact_Off.mp3');
-    outfox.play(window.location.href+'sounds/Message_Received.mp3');
+    outfox.audio.play(window.location.href+'sounds/Contact_On.mp3');
+    outfox.audio.play(window.location.href+'sounds/Contact_Off.mp3');
+    outfox.audio.play(window.location.href+'sounds/Message_Received.mp3');
 }
     </script>
   </head>

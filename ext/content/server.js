@@ -16,7 +16,7 @@
 const DELIMITER = '\3';
 
 utils.declare('outfox.ServerProxy', null, {
-    constructor: function() {
+    constructor: function(name) {
         this.socket = null;
         this.in_str = null;
         this.out_str = null;
@@ -30,9 +30,29 @@ utils.declare('outfox.ServerProxy', null, {
 	this.codec = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
 	this.codec.charset = 'utf-8';
 
-        // initialize the socket and launch the speech server
+        // initialize the socket and launch the server
+        var service = this._parseServicesXML(name);
         var port = this._initializeSocket();
-        this._initializeProcess(port);
+        this._initializeProcess(port, service);
+    },
+
+    _parseServicesXML: function(name) {
+        // build file from path
+	var file = utils.buildPath(null, 'platform', 'services.xml');
+        // read the XML file
+        var istr = Components.classes["@mozilla.org/network/file-input-stream;1"].createInstance(Components.interfaces.nsIFileInputStream);
+        istr.init(file, -1, -1)
+        var istr_script = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance(Components.interfaces.nsIScriptableInputStream);
+        istr_script.init(istr);
+        var count = istr_script.available();
+        var xml = istr_script.read(count);
+        istr_script.close();
+        // DOM parser
+        var parser = new DOMParser();
+        // parse into document
+        var doc = parser.parseFromString(xml);
+        // pull the service section
+        return doc.getElementById(name);
     },
 
     shutdown: function() {
@@ -72,29 +92,41 @@ utils.declare('outfox.ServerProxy', null, {
         return port;
     },
 
-    _initializeProcess: function(port) {
-	// default to running the python script using python from the local
-	// environments
-        var exec = utils.buildPath(null, 'platform', 'outfox.py');
+    _initializeProcess: function(port, service) {
+        var success = false;
+        // iterate over all executables until one succeeds
+        var execs = service.getElementsByTagName('executable');
+        for(var i=0; i<execs.length; i++) {
+            var exec = execs[i];
+            // build a file for the executable
+            var file = utils.buildPath(null, 'platform', exec);
+	    try {
+                // try to make the file executable
+                var chmod = utils.buildPath('/', 'bin', 'chmod');
+                utils.runProcess(chmod, ['0755', file.path], true);
+            } catch(e) {
+                // ignore for now
+            }
 
-	try {
-            // chmod to make speech service executable
-            var chmod = utils.buildPath('/', 'bin', 'chmod');
-            utils.runProcess(chmod, ['0755', exec.path], true);
-            //logit('ServerProxy: chmoded speech server');
-	} catch(e) {
-	    // assume executable if chmod fails
-	    var exec = utils.buildPath(null, 'platform', 'dist', 'outfox.exe');
-	}
-	    
-        // launch speech service
-        try {
-	    utils.runProcess(exec, [port], false);
-        } catch(e) {
-	    // set the failure flag so all future observers receive the error
-	    this.failed = '{"action" : "failed-init", "description" : "Outfox failed to initialize."}';
+            // append all arguments after the port number
+            var args = [port];
+            var nodes = exec.getElementsByTagName('args');
+            for(var j=0; j<nodes.length; j++) {
+                args.push(nodes[j]);
+            }
+            
+            try {
+                // try to launch to process
+	        utils.runProcess(file, args, false);
+                // return on success to avoid setting the failed var
+                return;
+            } catch(e) {
+                // ignore for now
+            }
         }
-        //logit('ServerProxy: launched speech server');
+
+	// set the failure flag so all future observers receive the error
+	this.failed = '{"action" : "service-failed", "description" : "Service ' + name + '" failed to initialize."}';
     },
 
     _notify: function(page_id, json) {
