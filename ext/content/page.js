@@ -1,120 +1,208 @@
 /*
- * Copyright (c) 2008 Carolina Computer Assistive Technology
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * */
+* Copyright (c) 2008 Carolina Computer Assistive Technology
+*
+* Permission to use, copy, modify, and distribute this software for any
+* purpose with or without fee is hereby granted, provided that the above
+* copyright notice and this permission notice appear in all copies.
+*
+* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+* */
+
+/**
+ * Manages commands flowing to / from Outfox on a page. Takes special action
+ * to start / stop services. Attempts to provide local file names for content
+ * cached by Firefox for URLs.
+ */
 utils.declare('outfox.PageController', null, {
+    /**
+     * Creates a cache controller. Starts listening to to the outgoing queue
+     * of commands on the page.
+     *
+     * @param id Page id of the page to control
+     * @param doc Document object for the page
+     * @param factory Factory that created this controller and can create
+     *   server proxies as well
+     */
     constructor: function(id, doc, factory) {
         this.id = id;
-	this.doc = doc;
-	this.factory = factory;
+        this.doc = doc;
+        this.factory = factory;
+        
+        // track started services
+        this.services = {};
 
-	// create cache session
-	this.cache = new outfox.CacheController();
+        // create cache session
+        this.cache = new outfox.CacheController();
 
         // locate or add incoming and outgoing queues
-	this.in_queue = this.doc.getElementById(ROOT_ID + '-in');
-	this.out_queue = this.doc.getElementById(ROOT_ID + '-out');
+        this.in_queue = this.doc.getElementById(ROOT_ID + '-in');
+        this.out_queue = this.doc.getElementById(ROOT_ID + '-out');
 
-	if(this.in_queue == null || this.out_queue == null) {
-	    // not a valid outfox node
-	    throw new Error('invalid outfox node');
-	}
+        if(this.in_queue == null || this.out_queue == null) {
+            // not a valid outfox node
+            throw new Error('invalid outfox node');
+        }
 
-        // watch for additions to the outgoing queuesb
+        // watch for additions to the outgoing queues
         this.tokens = [];
-        this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted',
-                                       this, '_onRequest'));
+        this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted', 
+            this, '_onRequest'));
 
-	// run through everything in the outgoing queue and process it 
-	// immediately
-
-	// register for incoming responses
-	//this.proxy.addObserver(this.id, utils.bind(this, this._onResponse));
+        // @todo: run through everything in the outgoing queue and process it 
+        // immediately
 
         logit('PageController: initialized');
     },
 
+    /**
+     * Stops listening for responses from all services. Unregisters the 
+     * listener for outgoing queue events.
+     */
     shutdown: function() {
         // unregister all listeners
         this.tokens.forEach(utils.disconnect);
-	// stop listening to responses from proxy
-	//this.proxy.removeObserver(this.id);
+        // stop all services for this page without waiting for a response
+        for(var service in this.services) {
+            this.factory.stopService(thid.id, service);
+            delete this.services[service];
+        }
     },
-
-    _onRequest: function(event) {
-	var node = event.target;
-	if(node.nodeName == '#text') {
-	    // pull out json encoded command
-	    var json = node.nodeValue;
-	    var cmd = utils.fromJson(json);
-
-	    if(cmd.action == 'start-service') {
-		// service start request
-		this.factory.startService(this.id, cmd);
-	    } else if(cmd.action == 'stop-service') {
-		// service stop request
-		this.factory.stopService(this.id, cmd);
-	    } else if(cmd.url) {
-		// request containing a URL that we might be able to cache
-		var fn;
-		// check if url is cached
-		try {
-		    fn = this.cache.getLocalFilename(cmd.url);
-		} catch(e) {
-		    // any exception here means the file isn't cacheable
-		    // leave fn undefined
-		    logit('cache entry exists, but file not on disk');
-		}
-		if(fn === null) {
-		    // define a callback for when the prefetch completes and
-		    // the cache entry is opened for filename access
-		    var self = this;
-		    var obs = function(reqid, filename) {
-			// change the action to indicate a deferred result
-			// which can be paired with the original based on the
-			// deferred request id
-			cmd.action = 'deferred-result';
-			if(filename) {
-			    // attach the filename, if it exists
-			    cmd.filename = filename;
-			}
-			// send the command to the proper service
-			self.factory.send(self.id, cmd);
-		    }
-		    // prefetch url
-		    var reqid = this.cache.fetch(cmd.url, obs);
-		    // mark command as deferred for now
-		    cmd.deferred = reqid;
-		} else if(fn != undefined){
-		    // make the command with the local cached copy filename
-		    // in case the external server can make use of it instead
-		    cmd.filename = fn;
-		}
-	    }
-
-	    // destroy request node
-	    this.out_queue.removeChild(node);
-	    // send the json using the proxy
-	    this.factory.send(this.id, cmd);
-	}
-    },
-
-    _onResponse: function(json) {
+    
+    /**
+     * Inserts a response from a service into the incoming DOM queue.
+     *
+     * @param json JSON encoding of the response object
+     */
+    _respond: function(json) {
         // add a node with the incoming json
-	var cmd = this.doc.createElement('div');
+        var div = this.doc.createElement('div');
         var tn = this.doc.createTextNode(json);
-	cmd.appendChild(tn);
-	this.in_queue.appendChild(cmd);
-    }
+        div.appendChild(tn);
+        this.in_queue.appendChild(div);
+    },
+
+    /**
+     * Called when the the in-page JS inserts a command into the outgoing
+     * DOM queue.
+     *
+     * @param event DOM event
+     */
+    _onRequest: function(event) {
+        var node = event.target;
+        if(node.nodeName == '#text') {
+            // pull out json encoded command
+            var json = node.nodeValue;
+            // destroy request node
+            this.out_queue.removeChild(node);
+            // decode to an object for internal use
+            var cmd = utils.fromJson(json);
+
+            if(cmd.action == 'start-service') {
+                // start a new service
+                var success = this._onStartService(cmd);
+                // don't send the command if the service failed to start
+                if(!success) return;
+            } else if(cmd.url) {
+                // use content from the browser disk cache if possible
+                // or try to cache it if not available
+                json = this._onCacheable(cmd);
+            }
+            // send the command to the service proxy via the factory
+            this.factory.send(this.id, service, json);
+        }
+    },
+
+    /**
+     * Called when a service responds to this page.
+     *
+     * @param json JSON encoded response object
+     */
+    _onResponse: function(json) {
+        var cmd = utils.fromJson(json);
+        if(cmd.action == 'stopped-service' || cmd.action == 'failed-service') {
+            // inform the factory that this page is no longer interested in
+            // the service that failed or stopped
+            this.factory.stopService(this.id, cmd.service)
+            delete this.services[cmd.service];
+        }
+        // put the response in the incoming queue
+        this._respond(json);
+    },
+    
+    /**
+     * Called to handle a start service command from the page. Instructs the
+     * factory to start the service. If starting fails synchronously, return
+     * false to avoid sending the command along to the external service.
+     *
+     * @param cmd Start service command
+     * @return True if the factory did not report an error starting the service
+     *         False if the factory reported an error
+     */
+    _onStartService: function(cmd) {
+        try {
+            // ensure the service exists before sending the command
+            this.factory.startService(this.id, cmd, 
+                utils.hitch(this, this._onResponse));
+        } catch(e) {
+            // put the exception into the incoming queue
+            this._respond(e.toString());
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Called to handle a command that has a URL with potentially cacheable
+     * content. Checks if the content of the URL is cached. If not, attempts
+     * to cache it and marks the command as deferred. Registers a callback to
+     * later send a deferred result to the service.
+     *
+     * @param cmd Command with a URL
+     * @return JSON encoded command updated with URL info or deferred marker
+     */
+    _onCacheable: function(cmd) {
+        // request containing a URL that we might be able to cache
+        var fn;
+        // check if url is cached
+        try {
+            fn = this.cache.getLocalFilename(cmd.url);
+        } catch(e) {
+            // any exception here means the file isn't cacheable
+            // leave fn undefined
+            //logit('cache entry exists, but file not on disk');
+        }
+        if(fn === null) {
+            // define a callback for when the prefetch completes and
+            // the cache entry is opened for filename access
+            var self = this;
+            var obs = function(reqid, filename) {
+                // change the action to indicate a deferred result
+                // which can be paired with the original based on the
+                // deferred request id
+                cmd.action = 'deferred-result';
+                if(filename) {
+                    // attach the filename, if it exists
+                    cmd.filename = filename;
+                }
+                // send the command to the proper service
+                self.factory.send(self.id, cmd.service, utils.toJson(cmd));
+            }
+            // prefetch url
+            var reqid = this.cache.fetch(cmd.url, obs);
+            // mark command as deferred for now
+            cmd.deferred = reqid;
+        } else if(fn != undefined){
+            // make the command with the local cached copy filename
+            // in case the external server can make use of it instead
+            cmd.filename = fn;
+        }
+        // encode updated command as JSON
+        return utils.toJson(cmd);
+    }    
 });
