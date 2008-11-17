@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <services xmlns="http://code.google.com/p/outfox">
   <service name="audio">
     <executable path="outfox.py">

@@ -46,14 +46,14 @@ class Outfox(object):
 
         # let the module dictate what happens next
         self.module.run(self.module)
-        print 'Outfox quit'
 
     def fail(self):
         # open a socket to report the failure
         s = socket.socket()
         s.connect(('127.0.0.1', self.port))
-        cmd = {'action' : 'failed-init',
-               'description' : 'Outfox not supported on this platform.'}
+        cmd = {}
+        cmd['action'] = 'failed-service',
+        cmd['description'] = 'service not supported on this platform'
         msg = simplejson.dumps({'page_id' : '*', 'cmd' : cmd})
         s.sendall(msg+DELIMITER)
 
@@ -66,25 +66,19 @@ class Outfox(object):
         page_id = dec['page_id']
         cmd = dec['cmd']
 
-        # check if the command is a destroy
-        if cmd.get('action') == 'shutdown':
-            try:
-                page = self.pages[page_id]
-            except KeyError:
-                return
-            page.shutdown()
+        # get the page matching the given id
+        try:
+            page = self.pages[page_id]
+        except KeyError:
+            page = self.module.buildPage(self.module, page_id)
+            # register for responses for the page
+            page.setObserver(self)
+            self.pages[page_id] = page
+        # let the page controller dispatch the message
+        page.pushRequest(cmd)
+        # remove page reference if destroying, even if we just created
+        if cmd.get('action') == 'stop-service':
             del self.pages[page_id]
-        else:
-            # get the page matching the given id
-            try:
-                page = self.pages[page_id]
-            except KeyError:
-                page = self.module.buildPage(self.module, page_id)
-                # register for responses for the page
-                page.setObserver(self)
-                self.pages[page_id] = page
-            # let the page controller dispatch the message
-            page.pushRequest(cmd)
 
     def pushResponse(self, page_id, cmd):
         # add service name to the command

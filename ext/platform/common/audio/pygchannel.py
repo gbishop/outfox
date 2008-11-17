@@ -100,9 +100,9 @@ class PygameChannelBase(ChannelBase):
         # make sure we don't run out of channels easily
         pygame.mixer.set_num_channels(MAX_CHANNELS)
 
-    def shutdown(self):
+    def shutdown(self, cmd):
         self.stop()
-        ChannelBase.shutdown(self)
+        ChannelBase.shutdown(self, cmd)
     
     def reset(self):
         # reinitialize local config

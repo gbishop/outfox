@@ -50,7 +50,7 @@ if(!outfox) {
             this.root.appendChild(this.out_dom);
             // monitor for incoming events
             this.token = outfox.utils.connect(this.in_dom, 'DOMNodeInserted',
-            this, '_onResponse');
+                this, '_onResponse');
             // append all at once so extension can find internal nodes once the 
             // outer one is added
             box.appendChild(this.root);

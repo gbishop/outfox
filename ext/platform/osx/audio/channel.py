@@ -40,11 +40,11 @@ class ChannelController(NSObject, ChannelBase):
         self.config['rate'] = 200
         self.config['loop'] = False
 
-    def shutdown(self):
+    def shutdown(self, cmd):
         self.stop()
         self.tts = None
         self.sound = None
-        ChannelBase.shutdown(self)
+        ChannelBase.shutdown(self, cmd)
     
     def reset(self):
         # reinitialize local config

@@ -15,26 +15,75 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
+
+# read the JS extension file once on first import
+JS_EXT = file('audio.js', 'r').read()
+
 class PageController(object):
     def __init__(self, id, module):
         self.id = id
         self.module = module
         self.channels = {}
         self.observer = None
-
-    def shutdown(self):
-        for ch in self.channels.values():
-            ch.shutdown()
-        self.observer = None
+        self.started = False
 
     def setObserver(self, ob):
         self.observer = ob
 
     def pushRequest(self, cmd):
+        if cmd['action'] == 'start-service':
+            # start service
+            self._onStart(cmd)
+        elif cmd['action'] == 'stop-service':
+            # stop service
+            self._onStop(cmd)
+        elif self.started:
+            # all other requests for channel after started
+            self._onChannelCmd(cmd)
+
+    def pushResponse(self, cmd):
+        # inform the observer of the response
+        self.observer.pushResponse(self.id, cmd)
+
+    def _onStart(self, cmd):
+        if self.started:
+            # make sure we haven't already started, if so, send an error
+            cmd = {}
+            cmd['action'] = 'failed-service'
+            cmd['description'] = 'service already started'
+            self.pushResponse(cmd)
+        else:
+            # send the service started message with the JS extension
+            cmd = {}
+            cmd['action'] = 'started-service'
+            cmd['extension'] = JS_EXT
+            self.pushResponse(cmd)
+            self.started = True
+        
+    def _onStop(self,cmd):
+        if not self.started:
+            # make sure we have started, if not, send an error
+            cmd = {}
+            cmd['action'] = 'failed-service'
+            cmd['description'] = 'service not started'
+            self.pushResponse(cmd)
+        else:
+            # send all services the stop message
+            for ch in self.channels.values():
+                ch.pushRequest(cmd)
+            # tell the requester that the service is stopped
+            cmd = {}
+            cmd['action'] = 'stopped-service'
+            self.pushResponse(cmd)
+            # clean up the observer
+            self.observer = None
+            self.started = False
+        
+    def _onChannelCmd(self, cmd):
         # find which channel we're attempting to use
         ch_id = cmd.get('channel', 0)
         try:
-            # get an existing
+            # get an existing channel
             ch = self.channels[ch_id]
         except KeyError:
             # build a new channel
@@ -42,7 +91,3 @@ class PageController(object):
             ch.setObserver(self)
             self.channels[ch_id] = ch
         ch.pushRequest(cmd)
-
-    def pushResponse(self, cmd):
-        # inform the observer of the response
-        self.observer.pushResponse(self.id, cmd)
