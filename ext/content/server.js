@@ -111,7 +111,7 @@ utils.declare('outfox.ServerProxy', null, {
         resp.description = description;
         resp.service = this.name;
         return utils.toJson(resp);
-    }
+    },
     
     /**
      * Reads the services XML file to find information about the service
@@ -126,7 +126,7 @@ utils.declare('outfox.ServerProxy', null, {
         // read the entire XML file
         try {
             var istr = Components.classes["@mozilla.org/network/file-input-stream;1"].createInstance(Components.interfaces.nsIFileInputStream);
-            istr.init(file, -1, -1)
+            istr.init(file, 0x01, 444, undefined);
             var istr_script = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance(Components.interfaces.nsIScriptableInputStream);
             istr_script.init(istr);
             var count = istr_script.available();
@@ -136,22 +136,34 @@ utils.declare('outfox.ServerProxy', null, {
             var desc = 'Could not read services XML.';
             throw new Error(this._buildFailure(desc));
         }
-        
+
         try {
             // DOM parser
             var parser = new DOMParser();
             // parse into document
-            var doc = parser.parseFromString(xml);
+            var doc = parser.parseFromString(xml, 'text/xml');
         } catch(e) {
             var desc = 'Could not parse services DOM.';
             throw new Error(this._buildFailure(desc));
         }
-        // pull the service section
-        var service = doc.getElementById(name);
+        
+        // pull all services sections; doc.getElementById not implemented
+        // for generic xml:id ...
+        var service = null;
+        var elems = doc.getElementsByTagName('service');
+        for(var i=0; i < elems.length; i++) {
+            var elem = elems[i];
+            if(elem.getAttribute('id') == name) {
+                service = elem;
+                break;
+            }
+        };
+        
         if(service == null) {
             var desc = 'Unknown service.';
             throw new Error(this._buildFailure(desc));
         }
+        return service;
     },
 
     /**
@@ -198,7 +210,7 @@ utils.declare('outfox.ServerProxy', null, {
         for(var i=0; i<execs.length; i++) {
             var exec = execs[i];
             // build a file for the executable
-            var file = utils.buildPath(null, 'platform', exec);
+            var file = utils.buildPath(null, 'platform', exec.getAttribute('path'));
             try {
                 // try to make the file executable
                 var chmod = utils.buildPath('/', 'bin', 'chmod');
@@ -209,9 +221,9 @@ utils.declare('outfox.ServerProxy', null, {
 
             // append all arguments after the port number
             var args = [port];
-            var nodes = exec.getElementsByTagName('args');
+            var nodes = exec.getElementsByTagName('arg');
             for(var j=0; j<nodes.length; j++) {
-                args.push(nodes[j]);
+                args.push(nodes[j].getAttribute('value'));
             }
 
             try {
@@ -241,7 +253,7 @@ utils.declare('outfox.ServerProxy', null, {
             try {
                 this.observers[page_id](json);
             } catch(e) {
-                //logit('ServerProxy: notify failure', e);
+                logit('ServerProxy: notify failure', e);
             }
         } else {
             // notify all observers
@@ -250,7 +262,7 @@ utils.declare('outfox.ServerProxy', null, {
                 try {
                     ob(json);
                 } catch(e) {
-                    //logit('ServerProxy: notify all failure', e);
+                    logit('ServerProxy: notify all failure', e);
                 }
             }
         }
@@ -285,7 +297,7 @@ utils.declare('outfox.ServerProxy', null, {
         }
         // make sure we send when a complete command is ready
         this.out_str.flush();
-        //logit('ServerProxy: sent message');
+        logit('ServerProxy: sent message');
     },
 
     /**
@@ -321,7 +333,7 @@ utils.declare('outfox.ServerProxy', null, {
         // open outgoing connection
         this.out_str = transport.openOutputStream(0,0,0);
 
-        //logit('ServerProxy: accepted incoming connection');
+        logit('ServerProxy: accepted incoming connection');
 
         // send any buffered data
         if(this.out_buff.length) {
@@ -345,7 +357,7 @@ utils.declare('outfox.ServerProxy', null, {
         this.socket.close();
         var desc = 'Unexpected service failure.';
         this._notify('*', this._buildFailure(desc));
-        //logit('ServerProxy: stopped listening');  
+        logit('ServerProxy: stopped listening');  
     },
 
     /**
@@ -355,7 +367,7 @@ utils.declare('outfox.ServerProxy', null, {
     * @param context Context of the request
     */
     onStartRequest: function(request, context) {
-        //logit('ServerProxy: started request');  
+        logit('ServerProxy: started request');  
     },
 
     /**
@@ -372,7 +384,7 @@ utils.declare('outfox.ServerProxy', null, {
         this.out_str = null;
         this.in_buff = [];
         this.out_buff = [];
-        //logit('ServerProxy: stopped request');  
+        logit('ServerProxy: stopped request');  
     },
 
     /**
@@ -410,6 +422,6 @@ utils.declare('outfox.ServerProxy', null, {
             // save data for later
             this.in_buff += data;
         }
-        //logit('ServerProxy: read data');
+        logit('ServerProxy: read data');
     }
 });

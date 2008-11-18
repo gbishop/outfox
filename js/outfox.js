@@ -57,11 +57,11 @@ if(!outfox) {
         },
 
         /**
-        * Start a service.
-        *
-        * @param name Name of the service
-        * @return Deferred
-        */
+         * Start a service.
+         *
+         * @param name Name of the service
+         * @return Deferred
+         */
         startService: function(name) {
             var def = this.services[name];
             if(def == undefined) {
@@ -69,17 +69,17 @@ if(!outfox) {
                 cmd.action = 'start-service';
                 cmd.service = name;
                 this.send(cmd);
-                var def = outfox.Deferred();
-                this.deferreds[name] = def;
+                var def = new outfox.Deferred();
+                this.services[name] = def;
             }
             return def;
         },
 
         /**
-        * Stop a service.
-        *
-        * @param name Name of the service
-        */
+         * Stop a service.
+         *
+         * @param name Name of the service
+         */
         stopService: function(name) {
             var cmd = {};
             cmd.action = 'stop-service';
@@ -88,17 +88,17 @@ if(!outfox) {
         },
 
         /**
-        * Adds a listener for service events. The listener signature should be:
-        *
-        * function observer(outfox, cmd)
-        *
-        * where outfox is the outfox object and cmd is an object with all of the
-        * callback data as properties.
-        * 
-        * @param ob Observer function
-        * @param service Service to observe
-        * @return Token to use to unregister this listener
-        */
+         * Adds a listener for service events. The listener signature should be
+         *
+         * function observer(outfox, cmd)
+         *
+         * where outfox is the outfox object and cmd is an object with all of
+         * the callback data as properties.
+         * 
+         * @param ob Observer function
+         * @param service Service to observe
+         * @return Token to use to unregister this listener
+         */
         addObserver: function(ob, service) {
             if(typeof this.observers[service] == 'undefined') {
                 this.observers[service] = [];
@@ -108,10 +108,10 @@ if(!outfox) {
         },
 
         /**
-        * Removes a listener from a service.
-        * 
-        * @param token Token returned when registering the listener
-        */
+         * Removes a listener from a service.
+         * 
+         * @param token Token returned when registering the listener
+         */
         removeObserver: function(token) {
             var obs = this.observers[token[0]];
             for(var i=0; i < obs.length; i++) {
@@ -123,10 +123,10 @@ if(!outfox) {
         },
 
         /**
-        * Sends a command to the server.
-        *
-        * @param cmd Command object
-        */ 
+         * Sends a command to the server.
+         *
+         * @param cmd Command object
+         */ 
         send: function(cmd) {
             var json = this.encoder(cmd);
             var node = document.createTextNode(json);
@@ -134,15 +134,17 @@ if(!outfox) {
         },
 
         /**
-        * Called when a response is received from the extension. Calls methods 
-        * on this object to handle service start, service stop, and errors.
-        * Passes all others to observers.
-        *
-        * @param event DOM event
-        */
+         * Called when a response is received from the extension. Calls methods 
+         * on this object to handle service start, service stop, and errors.
+         * Passes all others to observers.
+         *
+         * @param event DOM event
+         */
         _onResponse: function(event) {
             var node = event.target;
-            var cmd = this.decoder(node.innerHTML);
+            var cmd = this.decoder(node.nodeValue);
+            // destroy the DOM node first
+            this.in_dom.removeChild(node);
             // handle service start, stop, fail
             if(cmd.action == 'started-service') {
                 this._onServiceStarted(cmd);
@@ -165,16 +167,14 @@ if(!outfox) {
                     }
                 }
             }
-            // destroy the DOM node
-            this.in_dom.removeChild(node);
         },
 
         /**
-        * Called when a service started successfully. Inserts a script node to
-        * execute its JS extension.
-        *
-        * @param cmd Service started command
-        */
+         * Called when a service started successfully. Inserts a script node to
+         * execute its JS extension.
+         *
+         * @param cmd Service started command
+         */
         _onServiceStarted: function(cmd) {
             try {
                 // make sure stop hasn't been called
@@ -185,7 +185,7 @@ if(!outfox) {
             }
             // add code extension to page
             var script = document.createElement('script');
-            var head = document.getElementsByTagName('head');
+            var head = document.getElementsByTagName('head')[0];
             head.appendChild(script);
             // add the extension to the outfox object under the service name
             // invoke its init method when the script tag runs it
@@ -200,11 +200,11 @@ if(!outfox) {
         },
 
         /**
-        * Called by a service extension when it is initialized. Invokes the
-        * callback on the deferred.
-        *
-        * @param name Name of the service
-        */
+         * Called by a service extension when it is initialized. Invokes the
+         * callback on the deferred.
+         *
+         * @param name Name of the service
+         */
         _onServiceExtensionReady: function(name) {
             var def = this.services[name];
             if(def != undefined) {
@@ -213,28 +213,28 @@ if(!outfox) {
         },
 
         /**
-        * Called when a service failed to start. Invokes the errback on the
-        * deferred.
-        *
-        * @param cmd Service started command
-        */
+         * Called when a service failed to start. Invokes the errback on the
+         * deferred.
+         *
+         * @param cmd Service started command
+         */
         _onServiceFailed: function(cmd) {
             var def = this.services[cmd.service];
             if(def != undefined) {
                 def.errback(cmd);
-            }
-            // clean up the service
-            if(def.script) {
-                this._onServiceStopped(cmd);
+                // clean up the service
+                if(def.script) {
+                    this._onServiceStopped(cmd);
+                }
             }
         },
 
         /**
-        * Called when a service stops. Cleans up the script extension and
-        * deferred.
-        *
-        * @param cmd Service stopped command
-        */
+         * Called when a service stops. Cleans up the script extension and
+         * deferred.
+         *
+         * @param cmd Service stopped command
+         */
         _onServiceStopped: function(cmd) {
             var def = this.services[cmd.service];
             // remove the script node
@@ -316,26 +316,27 @@ if(!outfox) {
             if(this.value) {
                 try {
                     ob(value);
-                    } catch(e) {}
-                    return;
-                } else if(this.error) {
-                    throw new Error('already called');
+                } catch(e) {
                 }
-                this.callbacks.push(ob);
+                return;
+            } else if(this.error) {
+                throw new Error('already called');
             }
+            this.callbacks.push(ob);
         },
 
         addErrback: function(ob) {
             if(this.error) {
                 try {
                     ob(value);
-                    } catch(e) {}
-                    return;
-                } else if(this.value) {
-                    throw new Error('already called');
+                } catch(e) {
+                    
                 }
-                this.errbacks.push(ob);
+                return;
+            } else if(this.value) {
+                throw new Error('already called');
             }
+            this.errbacks.push(ob);
         },
 
         callback: function(value) {

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <services xmlns="http://code.google.com/p/outfox">
-  <service name="audio">
+  <service id="audio">
     <executable path="outfox.py">
       <arg value="audio" />
     </executable>
@@ -8,14 +8,12 @@
       <arg value="audio" />
     </executable>
   </service>
-  <!--
-      <service name="joystick">
-      <executable path="outfox.py">
+  <service id="joystick">
+    <executable path="outfox.py">
       <arg value="joystick" />
-      </executable>
-      <executable path="dist/outfox.exe">
+    </executable>
+    <executable path="dist/outfox.exe">
       <arg value="joystick" />
-      </executable>
-      </service>
-  -->
+    </executable>
+  </service>
 </services>

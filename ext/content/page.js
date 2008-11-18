@@ -54,8 +54,11 @@ utils.declare('outfox.PageController', null, {
         this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted', 
             this, '_onRequest'));
 
-        // @todo: run through everything in the outgoing queue and process it 
-        // immediately
+        // run through everything waiting in the outgoing queue and process it 
+        while(this.out_queue.firstChild) {
+            // handler removes nodes for us
+            this._onRequest({'target' : this.out_queue.firstChild});
+        }
 
         logit('PageController: initialized');
     },
@@ -81,10 +84,8 @@ utils.declare('outfox.PageController', null, {
      */
     _respond: function(json) {
         // add a node with the incoming json
-        var div = this.doc.createElement('div');
         var tn = this.doc.createTextNode(json);
-        div.appendChild(tn);
-        this.in_queue.appendChild(div);
+        this.in_queue.appendChild(tn);
     },
 
     /**
@@ -95,17 +96,18 @@ utils.declare('outfox.PageController', null, {
      */
     _onRequest: function(event) {
         var node = event.target;
+        // destroy request node immediately to prevent leftovers
+        this.out_queue.removeChild(node);
         if(node.nodeName == '#text') {
             // pull out json encoded command
             var json = node.nodeValue;
-            // destroy request node
-            this.out_queue.removeChild(node);
+            logit('PageController: request', json);
             // decode to an object for internal use
             var cmd = utils.fromJson(json);
-
             if(cmd.action == 'start-service') {
                 // start a new service
                 var success = this._onStartService(cmd);
+                logit('PageController: success launching service', success);
                 // don't send the command if the service failed to start
                 if(!success) return;
             } else if(cmd.url) {
@@ -114,7 +116,7 @@ utils.declare('outfox.PageController', null, {
                 json = this._onCacheable(cmd);
             }
             // send the command to the service proxy via the factory
-            this.factory.send(this.id, service, json);
+            this.factory.send(this.id, cmd.service, json);
         }
     },
 
@@ -147,13 +149,15 @@ utils.declare('outfox.PageController', null, {
     _onStartService: function(cmd) {
         try {
             // ensure the service exists before sending the command
-            this.factory.startService(this.id, cmd, 
-                utils.hitch(this, this._onResponse));
+            this.factory.startService(this.id, cmd.service, 
+                utils.bind(this, this._onResponse));
         } catch(e) {
-            // put the exception into the incoming queue
-            this._respond(e.toString());
+            // put the exception into the incoming queue as a service failure
+            this._respond(e.message);
+            logit('PageController: failed to start service');
             return false;
         }
+        logit('PageController: started service');
         return true;
     },
 
@@ -175,7 +179,7 @@ utils.declare('outfox.PageController', null, {
         } catch(e) {
             // any exception here means the file isn't cacheable
             // leave fn undefined
-            //logit('cache entry exists, but file not on disk');
+            logit('PageController: cache entry exists, but file not on disk');
         }
         if(fn === null) {
             // define a callback for when the prefetch completes and

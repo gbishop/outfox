@@ -34,7 +34,7 @@ utils.declare('outfox.Factory', null, {
         this.controllers = {};
         // watch for Firefox window load event
         this.tokens.push(utils.connect(window, 'load', this, 'initialize'));
-        //logit('Factory: created');
+        logit('Factory: created');
     },
 
     /**
@@ -52,7 +52,7 @@ utils.declare('outfox.Factory', null, {
         var tabs = gBrowser.tabContainer;
         this.tokens.push(utils.connect(tabs, 'TabClose', this, '_onTabClose',
         false));
-        //logit('Factory: initialized');
+        logit('Factory: initialized');
     },
 
     /**
@@ -77,7 +77,7 @@ utils.declare('outfox.Factory', null, {
             var sv = this.services[key];
             sv.shutdown();
         }
-        //logit("Factory: shutdown");
+        logit("Factory: shutdown");
     },
 
     /**
@@ -92,7 +92,7 @@ utils.declare('outfox.Factory', null, {
         var pc = new outfox.PageController(page_id, doc, this);
         // store controller in conjunction with the document
         this.controllers[page_id] = pc;
-        //logit('Factory: created outfox controller');
+        logit('Factory: created page controller');
     },
 
     /**
@@ -101,8 +101,10 @@ utils.declare('outfox.Factory', null, {
     * @param event Document load event
     */
     _onPageLoad: function(event) {
+        logit('Factory: page load detected');
         var doc = event.originalTarget;
         if(doc.nodeName == '#document') {
+            logit('Factory: page processing started');
             // attach the page id to the document so we can unregister listeners
             // later
             doc.outfox_page_id = this.page_id;
@@ -117,7 +119,7 @@ utils.declare('outfox.Factory', null, {
                     [this.page_id]);
                 this.page_tokens[this.page_id] = utils.connect(doc, 
                     'DOMNodeInserted', cb);
-                //logit('Factory: created insert watcher');
+                logit('Factory: created insert watcher');
             }
             // increment no matter what so we can track node watcher hook
             ++this.page_id;
@@ -138,14 +140,14 @@ utils.declare('outfox.Factory', null, {
             if(pt) {
                 utils.disconnect(pt);
                 delete this.page_tokens[page_id];
-                //logit('Factory: disconnected insert watcher');
+                logit('Factory: disconnected insert watcher');
             }
             // destroy the controller if one exists for the document
             var pc = this.controllers[page_id];
             if(pc) {
                 pc.shutdown();
                 delete this.controllers[page_id];
-                //logit('Factory: destroyed outfox controller');
+                logit('Factory: destroyed outfox controller');
             }
         }
     },
@@ -177,7 +179,7 @@ utils.declare('outfox.Factory', null, {
             var pt = this.page_tokens[page_id];
             utils.disconnect(pt);
             delete this.page_tokens[page_id];
-            //logit('Factory: disconnected insert watcher');
+            logit('Factory: disconnected insert watcher');
             // create the controller
             this._createController(page_id, outfox_node.ownerDocument);
         }
@@ -220,12 +222,13 @@ utils.declare('outfox.Factory', null, {
             proxy = new outfox.ServerProxy(service);
             // register our fail service method as an observer for the
             // special all pages * id
-            proxy.addObserver('*', utils.hitch(this, this._onFailedService));
+            proxy.addObserver('*', utils.bind(this, this._onFailedService));
             // store the proxy for future requests
             this.services[service] = proxy;
         }
         // add the requester as an observer
         proxy.addObserver(page_id, ob);
+        logit('Factory: started service');
     },
 
     /**
@@ -260,14 +263,16 @@ utils.declare('outfox.Factory', null, {
      * @param json JSON encoded command
      */
     send: function(page_id, service, json) {
+        logit('Factory: send', page_id, service, json);
         // locate the proper proxy
         var proxy = this.services[service];
         // ignore sends if service not started
         if(!proxy) return;
         // invoke the send method of the proxy
         proxy.send(page_id, json);
+        logit('Factory: sent');
     }
 });
 
 // allow one factory instance per window
-var outfox = new outfox.Factory();
+var factory = new outfox.Factory();

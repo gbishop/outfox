@@ -12,6 +12,9 @@
       width: 100%;
       height: 100px;
     }
+    #status {
+        background-color: gold;
+    }
     </style>
     <script type="text/javascript" src="json2.js"></script>
     <script type="text/javascript" src="outfox.js"></script>
@@ -24,7 +27,8 @@ function onLoad(event) {
         enableButtons(true);
     });
     def.addErrback(function(cmd) {
-        document.byId('box').innerHTML = cmd.description;
+        var box = document.getElementById('status');
+        box.innerHTML = cmd.description;
     });
 }
 
@@ -176,6 +180,7 @@ function test8(button) {
   </head>
   <body onload="onLoad()">
     <h1>Outfox Tests</h1>
+    <div id="status"></div>
     <div id="box"></div>
     <div>
       <h2>Single Speech</h2>

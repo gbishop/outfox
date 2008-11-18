@@ -25,7 +25,19 @@ init: function() {
     // listen for audio service events
     outfox.addObserver(outfox.utils.bind(this, this._onResponse), 'audio');
     // send request for default config
-    var cmd = {'action' : 'get-config', 'channel' : 0};
+    var cmd = {};
+    cmd.action = 'get-config';
+    cmd.channel = 0;
+    this.send(cmd);
+},
+
+/**
+ * Sends a command with service attribute set to audio.
+ *
+ * @param cmd Command object
+ */
+send: function(cmd) {
+    cmd.service = 'audio';
     outfox.send(cmd);
 },
 
@@ -45,7 +57,7 @@ say: function(text, channel, name) {
     if(typeof name != 'undefined')
         args.name = name;
     args.action = 'say';
-    outfox.send(args);
+    this.send(args);
 },
 
 /**
@@ -64,7 +76,7 @@ play: function(url, channel, name) {
     if(typeof name != 'undefined')
         args.name = name;
     args.action = 'play';
-    outfox.send(args);	
+    this.send(args);	
 },
 
 /**
@@ -76,7 +88,7 @@ stop: function(channel) {
     var args = {};
     args.channel = channel || 0;        
     args.action = 'stop';
-    outfox.send(args);
+    this.send(args);
 },
 
 /**
@@ -93,7 +105,7 @@ setPropertyNow: function(name, value, channel) {
     args.name = name;
     args.value = value || '';
     args.action = 'set-now';
-    outfox.send(args);
+    this.send(args);
     // since the value will be applied immediately, update the local
     // property value too
     var ch_conf = this.config[channel];
@@ -119,7 +131,7 @@ setProperty: function(name, value, channel) {
     args.name = name;
     args.value = value || '';
     args.action = 'set-queued';
-    outfox.send(args);
+    this.send(args);
     // do not update local until the server gives notice that the value
     // has actually changed
 },
@@ -154,7 +166,7 @@ resetNow: function(channel) {
     channel = channel || 0;
     var args = {};
     args.action = 'reset-now';
-    outfox.send(args);
+    this.send(args);
 },
 
 /**
@@ -167,7 +179,7 @@ reset: function(channel) {
     channel = channel || 0;
     var args = {};
     args.action = 'reset-queued';
-    outfox.send(args);
+    this.send(args);
 },
 
 /**
@@ -226,7 +238,7 @@ _onResponse: function(of, cmd) {
     if(typeof obs != 'undefined') {
         for(var i=0; i < obs.length; i++) {
         	try {
-        	    obs[i](cmd);
+        	    obs[i](this, cmd);
         	} catch(e) {
         	    // ignore callback exceptions
         	}
@@ -244,6 +256,7 @@ _onSetConfig: function(cmd) {
     // store initial configuration for this channel
     this.config[cmd.channel] = cmd.config;
     if(this.defaults == null) {
+        this.defaults = {};
         // first config response, make a copy as default
         for(var key in cmd.config) {
 	        this.defaults[key] = cmd.config[key];
