@@ -78,6 +78,7 @@ class Outfox(object):
         page.pushRequest(cmd)
         # remove page reference if destroying, even if we just created
         if cmd.get('action') == 'stop-service':
+            print 'stopping service for page', page_id
             del self.pages[page_id]
 
     def pushResponse(self, page_id, cmd):

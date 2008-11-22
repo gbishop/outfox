@@ -71,6 +71,7 @@ utils.declare('outfox.ServerProxy', null, {
         this.out_buff = [];
         this.in_buff = '';
         this.observers = [];
+        logit('ServerProxy: shutdown');
     },
 
     /**

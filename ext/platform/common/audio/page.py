@@ -17,7 +17,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import os
 # read the JS extension file once on first import
-JS_EXT = file(os.path.join('common', 'audio', 'audio.js')).read()
+JS_EXT = file(os.path.join(os.path.dirname(__file__), 'audio.js')).read()
 
 class PageController(object):
     def __init__(self, id, module):

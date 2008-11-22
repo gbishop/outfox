@@ -71,10 +71,12 @@ utils.declare('outfox.PageController', null, {
         // unregister all listeners
         this.tokens.forEach(utils.disconnect);
         // stop all services for this page without waiting for a response
-        for(var service in this.services) {
-            this.factory.stopService(thid.id, service);
+        var services = this.services;
+        for(var service in services) {
+            this.factory.stopService(this.id, service);
             delete this.services[service];
         }
+        logit('Page: shutdown');
     },
     
     /**
@@ -157,6 +159,7 @@ utils.declare('outfox.PageController', null, {
             logit('PageController: failed to start service');
             return false;
         }
+        this.services[cmd.service] = true;
         logit('PageController: started service');
         return true;
     },

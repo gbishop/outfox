@@ -240,18 +240,22 @@ utils.declare('outfox.Factory', null, {
      * @param service Name of the service to stop
      */
     stopService: function(page_id, service) {
+        logit('Factory: stopping service', page_id, service);
         // check if the service started
         var proxy = this.services[service];
         // ignore stops if the service is not started or has already failed
         // and was removed
+        logit('proxy', proxy);
         if(!proxy) return;
         // remove the requester as an observer
         var count = proxy.removeObserver(page_id);
-        if(count <= 0) {
+        logit('count', count);
+        if(count <= 1) {
+            logit('Factory: shutting down service');
             // shutdown the proxy
             proxy.shutdown();
             // remove reference to the proxy
-            delete this.services[resp.service];
+            delete this.services[service];
         }
     },
 
