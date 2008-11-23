@@ -65,6 +65,7 @@ if(!outfox) {
         startService: function(name) {
             var def = this.services[name];
             if(def == undefined) {
+                console.debug('starting new service', name);
                 var cmd = {};
                 cmd.action = 'start-service';
                 cmd.service = name;
@@ -239,9 +240,11 @@ if(!outfox) {
             var def = this.services[cmd.service];
             // remove the script node
             var head = document.getElementsByTagName('head');
-            head.removeChild(def.script);
+            head[0].removeChild(def.script);
             // remove code extension
             delete this[cmd.service];
+            // remove deferred
+            delete this.services[cmd.service];
         }
     };
 
