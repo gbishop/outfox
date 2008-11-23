@@ -36,11 +36,11 @@ function enableButtons(run, stop) {
     var buttons = document.getElementsByTagName('button');
     for(var i=0; i < buttons.length; i++) {
         var b = buttons[i];
-	if(b.id == 'stop') {
-	    b.disabled = !stop;
-	} else {
+	    if(b.id == 'stop') {
+	        b.disabled = !stop;
+	    } else {
             b.disabled = !run;
-	}
+	    }
     }
 }
 
@@ -48,11 +48,9 @@ function test1(button) {
     enableButtons(false);
     var node = document.getElementById('test1-text');
     var token = outfox.audio.addObserver(function(tts, cmd) {
-        if(cmd.action == 'finished-say') {
-            enableButtons(true);
-            tts.removeObserver(token);
-        }
-    });
+        enableButtons(true);
+        tts.removeObserver(token);
+    }, 0, ['finished-say']);
     outfox.audio.say(node.innerHTML);
     
 }
@@ -60,11 +58,9 @@ function test1(button) {
 function test2(button) {
     enableButtons(false);
     var token = outfox.audio.addObserver(function(tts, cmd) {
-        if(cmd.action == 'finished-play') {
-	    enableButtons(true);
-            tts.removeObserver(token);
-        }
-    });
+        enableButtons(true);
+        tts.removeObserver(token);
+    }, 0, ['finished-play']);
     outfox.audio.play(window.location.href+'sounds/Message_Received.mp3');
 }
 
@@ -72,11 +68,9 @@ function test3(button) {
     var node = document.getElementById('test3-text');
     enableButtons(false);
     var token = outfox.audio.addObserver(function(tts, cmd) {
-        if(cmd.action == 'finished-play') {
-	    enableButtons(true);
-            tts.removeObserver(token);
-        }
-    });
+        enableButtons(true);
+        tts.removeObserver(token);
+    }, 0, ['finished-play']);
     outfox.audio.say(node.innerHTML);
     outfox.audio.play(window.location.href+'sounds/Message_Received.mp3');
 }
@@ -86,17 +80,15 @@ function test4(button) {
     enableButtons(false);
     var count = 0;
     var callback = function(tts, cmd) {
-        if(cmd.action == 'finished-play' || cmd.action == 'finished-say') {
-            count++;
-        }
+        count++;
         if(count == 2) {
-	    enableButtons(true);
+	        enableButtons(true);
             tts.removeObserver(token_speech);
             tts.removeObserver(token_sound);
         }
-    }
-    var token_speech = outfox.audio.addObserver(callback);
-    var token_sound =  outfox.audio.addObserver(callback, 1);
+    };
+    var token_speech = outfox.audio.addObserver(callback, 0, ['finished-say']);
+    var token_sound =  outfox.audio.addObserver(callback, 1, ['finished-play']);
     outfox.audio.say(node.innerHTML);
     outfox.audio.play(window.location.href+'sounds/Message_Received.mp3', 1);
 }
@@ -105,15 +97,13 @@ function test5(button) {
     enableButtons(false);
     var count = 0;
     var token = outfox.audio.addObserver(function(tts, cmd) {
-        if(cmd.action == 'finished-say') {
-            if(count == 0) {
-                count++;
-            } else if(count == 1) {
-		enableButtons(true);
-                tts.removeObserver(token);
-            }
+        if(count == 0) {
+            count++;
+        } else if(count == 1) {
+	        enableButtons(true);
+            tts.removeObserver(token);
         }
-    });
+    }, 0, ['finished-say']);
     outfox.audio.setProperty('rate', 100);
     outfox.audio.setProperty('volume', 0.3);
     var node = document.getElementById('test5-text1');
@@ -165,11 +155,11 @@ function test8(button) {
     var count = 0;
     var token = outfox.audio.addObserver(function(tts, cmd) {
         if(cmd.action == 'finished-play') {
-	    ++count;
-	    if(count == 3) {
-		enableButtons(true);
-		tts.removeObserver(token);
-	    }
+	        ++count;
+	        if(count == 3) {
+		        enableButtons(true);
+		        tts.removeObserver(token);
+	        }
         }
     });
     outfox.audio.play(window.location.href+'sounds/Contact_On.mp3');

@@ -185,22 +185,26 @@ reset: function(channel) {
 /**
  * Adds a listener for events in a channel. The listener signature should be
  *
- * function observer(outfox, cmd)
+ * function observer(audio, cmd)
  *
- * where outfox is the outfox object and cmd is an object with all of the
+ * where outfox is the outfox.audio object and cmd is an object with all of the
  * callback data as properties.
  * 
  * @param ob Observer function
- * @param channel Channel to observe (defaults to 0)
+ * @param channel Integer channel to observe (defaults to 0)
+ * @param actions Array of action strings to observe (defaults to all)
  * @return Token to use to unregister this listener
  */
-addObserver: function(ob, channel) {
+addObserver: function(ob, channel, actions) {
     channel = channel || 0;
+    var packet = {};
+    packet.ob = ob;
+    packet.actions = actions;
     if(typeof this.observers[channel] == 'undefined') {
         this.observers[channel] = [];
     }
-    this.observers[channel].push(ob);
-    return [channel, ob];
+    this.observers[channel].push(packet);
+    return [channel, packet];
 },
 
 /**
@@ -237,10 +241,15 @@ _onResponse: function(of, cmd) {
     var obs = this.observers[cmd.channel];
     if(typeof obs != 'undefined') {
         for(var i=0; i < obs.length; i++) {
-        	try {
-        	    obs[i](this, cmd);
-        	} catch(e) {
-        	    // ignore callback exceptions
+            var packet = obs[i];
+            if(typeof(packet.actions) == 'undefined' || 
+                packet.actions.indexOf(cmd.action) != -1) {
+                // observer wants this action
+        	    try {
+        	        packet.ob(this, cmd);
+        	    } catch(e) {
+        	        // ignore callback exceptions
+        	    }
         	}
         }
     }

@@ -65,7 +65,6 @@ if(!outfox) {
         startService: function(name) {
             var def = this.services[name];
             if(def == undefined) {
-                console.debug('starting new service', name);
                 var cmd = {};
                 cmd.action = 'start-service';
                 cmd.service = name;
