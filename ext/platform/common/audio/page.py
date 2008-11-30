@@ -16,8 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import os
-# read the JS extension file once on first import
-JS_EXT = file(os.path.join(os.path.dirname(__file__), 'audio.js')).read()
+import jsext
 
 class PageController(object):
     def __init__(self, id, module):
@@ -56,7 +55,7 @@ class PageController(object):
             # send the service started message with the JS extension
             cmd = {}
             cmd['action'] = 'started-service'
-            cmd['extension'] = JS_EXT
+            cmd['extension'] = jsext.CLASS
             self.pushResponse(cmd)
             self.started = True
         

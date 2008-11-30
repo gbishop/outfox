@@ -156,7 +156,7 @@ utils.declare('outfox.PageController', null, {
         } catch(e) {
             // put the exception into the incoming queue as a service failure
             this._respond(e.message);
-            logit('PageController: failed to start service');
+            logit('PageController: failed to start service ' + e.message);
             return false;
         }
         this.services[cmd.service] = true;

@@ -211,7 +211,11 @@ utils.declare('outfox.ServerProxy', null, {
         for(var i=0; i<execs.length; i++) {
             var exec = execs[i];
             // build a file for the executable
-            var file = utils.buildPath(null, 'platform', exec.getAttribute('path'));
+            logit('*** building file', exec.getAttribute('path'));
+            var parts = [null, 'platform'];
+            parts = parts.concat(exec.getAttribute('path').split('/'));
+            logit('*** building file', parts);
+            var file = utils.buildPath.apply(utils, parts);
             try {
                 // try to make the file executable
                 var chmod = utils.buildPath('/', 'bin', 'chmod');
@@ -226,7 +230,7 @@ utils.declare('outfox.ServerProxy', null, {
             for(var j=0; j<nodes.length; j++) {
                 args.push(nodes[j].getAttribute('value'));
             }
-
+            logit('*** arguments: ', args);
             try {
                 // try to launch to process
                 utils.runProcess(file, args, false);

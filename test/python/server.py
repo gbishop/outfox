@@ -14,7 +14,7 @@ class Handler(asynchat.async_chat):
         self.addr = addr
         self.in_buff = []
         self.set_terminator(DELIMITER)
-        self.doCommand('{"action" : "get-config"}')
+        self.doCommand('{"action" : "start-service", "name" : "audio"}')
 
     def doCommand(self, text):
         self.sendMessage('{"page_id" : 0, "cmd" : %s}' % text)
@@ -66,21 +66,21 @@ t = threading.Thread(target=asyncore.loop, args=[2])
 t.start()
 
 def test2():
-    s.hand.doCommand('{"action" : "say", "text" : "hello out there", "channel" : 0}')
-    s.hand.doCommand('{"action" : "say", "text" : "i am sam", "channel" : 1}')
+    s.hand.doCommand('{"service" : "audio", "action" : "say", "text" : "hello out there", "channel" : 0}')
+    s.hand.doCommand('{"service" : "audio", "action" : "say", "text" : "i am sam", "channel" : 1}')
 
 def testQ():
-    s.hand.doCommand('{"action" : "say", "text" : "hello out there"}')
-    s.hand.doCommand('{"action" : "say", "text" : "i am sam"}')
+    s.hand.doCommand('{"service" : "audio", "action" : "say", "text" : "hello out there"}')
+    s.hand.doCommand('{"service" : "audio", "action" : "say", "text" : "i am sam"}')
 
 def testP(v=0.5,r=100):
-    s.hand.doCommand('{"action" : "set-queued", "name" : "rate", "value" : %d}' % r)
+    s.hand.doCommand('{"service" : "audio", "action" : "set-queued", "name" : "rate", "value" : %d}' % r)
 
-    s.hand.doCommand('{"action" : "set-queued", "name" : "volume", "value" : %f}' % v)
-    s.hand.doCommand('{"action" : "say", "text" : "hello out there"}')
+    s.hand.doCommand('{"service" : "audio", "action" : "set-queued", "name" : "volume", "value" : %f}' % v)
+    s.hand.doCommand('{"service" : "audio", "action" : "say", "text" : "hello out there"}')
 
-    s.hand.doCommand('{"action" : "set-queued", "name" : "rate", "value" : %d}' % (r*2))
+    s.hand.doCommand('{"service" : "audio", "action" : "set-queued", "name" : "rate", "value" : %d}' % (r*2))
 
-    s.hand.doCommand('{"action" : "set-queued", "name" : "volume", "value" : %f}' % (v*2))
-    s.hand.doCommand('{"action" : "say", "text" : "hello out there again"}')
+    s.hand.doCommand('{"service" : "audio", "action" : "set-queued", "name" : "volume", "value" : %f}' % (v*2))
+    s.hand.doCommand('{"service" : "audio", "action" : "say", "text" : "hello out there again"}')
 
