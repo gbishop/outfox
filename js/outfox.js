@@ -63,28 +63,48 @@ if(!outfox) {
          * @return Deferred
          */
         startService: function(name) {
-            var def = this.services[name];
-            if(def == undefined) {
+            var state = this.services[name];
+            if(state == undefined) {
+                // send start command if service not yet started
                 var cmd = {};
                 cmd.action = 'start-service';
                 cmd.service = name;
                 this.send(cmd);
+                // build new state
                 var def = new outfox.Deferred();
-                this.services[name] = def;
+                state = {};
+                state.start_def = def;
+                state.status = 'starting';
+                this.services[name] = state;
+            } else if(state.status == 'stopping') {
+                // throw error if service is in the process of stopping
+                throw new Error('service stopping');
             }
-            return def;
+            return state.start_def;
         },
 
         /**
          * Stop a service.
          *
          * @param name Name of the service
+         * @return Deferred
          */
         stopService: function(name) {
-            var cmd = {};
-            cmd.action = 'stop-service';
-            cmd.service = name;
-            this.send(cmd);
+            var state = this.services[name];
+            if(state && state.action == 'started') {
+                // send stop if the service was started successfully
+                var cmd = {};
+                cmd.action = 'stop-service';
+                cmd.service = name;
+                this.send(cmd);
+                // store new deferred for the stop
+                var def = new outfox.Deferred();
+                state.stop_def = def;
+                state.status = 'stopping';
+            } else if (!state || state.status != 'stopping') {
+                throw new Error('service not started');
+            }
+            return state.stop_def;
         },
 
         /**
@@ -176,27 +196,23 @@ if(!outfox) {
          * @param cmd Service started command
          */
         _onServiceStarted: function(cmd) {
-            try {
-                // make sure stop hasn't been called
-                var def = this.services[cmd.service];
-            } catch(e) {
-                // ignore, service will stop
-                return;
+            // fetch the deferred for this start
+            var state = this.services[cmd.service];
+            if(state != undefined) {
+                // add code extension to page
+                var script = document.createElement('script');
+                var head = document.getElementsByTagName('head')[0];
+                head.appendChild(script);
+                // add the extension to the outfox object under the service name
+                // invoke its init method when the script tag runs it
+                // the extension must call _onServiceExtensionReady or _onServiceFailed
+                // on this object after initialization
+                script.textContent = 'outfox.'+cmd.service+' = {'+cmd.extension+'}; outfox.'+cmd.service+'.init()';
+                // hang onto the script node for removal
+                state.script = script;
+                // hang onto the command for later callback
+                state.cmd = cmd;
             }
-            // add code extension to page
-            var script = document.createElement('script');
-            var head = document.getElementsByTagName('head')[0];
-            head.appendChild(script);
-            // add the extension to the outfox object under the service name
-            // invoke its init method when the script tag runs it
-            // the extension must call _onServiceExtensionReady or _onServiceFailed
-            // on this object after initialization
-            script.textContent = 'outfox.'+cmd.service+' = {'+cmd.extension+'}; outfox.'+cmd.service+'.init()';
-
-            // hang onto the script node for removal
-            def.script = script;
-            // hang onto the command for later callback
-            def.cmd = cmd;
         },
 
         /**
@@ -206,9 +222,11 @@ if(!outfox) {
          * @param name Name of the service
          */
         _onServiceExtensionReady: function(name) {
-            var def = this.services[name];
-            if(def != undefined) {
-                def.callback(def.cmd);
+            var state = this.services[name];
+            if(state != undefined) {
+                state.status = 'started';
+                // inform listeners
+                state.start_def.callback(state.cmd);
             }
         },
 
@@ -219,13 +237,19 @@ if(!outfox) {
          * @param cmd Service started command
          */
         _onServiceFailed: function(cmd) {
-            var def = this.services[cmd.service];
-            if(def != undefined) {
-                def.errback(cmd);
-                // clean up the service
-                if(def.script) {
-                    this._onServiceStopped(cmd);
+            var state = this.services[cmd.service];
+            if(state != undefined) {
+                if(state.script) {
+                    // remove the script node
+                    var head = document.getElementsByTagName('head');
+                    head[0].removeChild(state.script);
+                    // remove code extension
+                    delete this[cmd.service];
                 }
+                // remove the service state
+                delete this.services[cmd.service];
+                // inform start listener of failure
+                state.start_def.errback(cmd);
             }
         },
 
@@ -236,14 +260,20 @@ if(!outfox) {
          * @param cmd Service stopped command
          */
         _onServiceStopped: function(cmd) {
-            var def = this.services[cmd.service];
-            // remove the script node
-            var head = document.getElementsByTagName('head');
-            head[0].removeChild(def.script);
-            // remove code extension
-            delete this[cmd.service];
-            // remove deferred
-            delete this.services[cmd.service];
+            var state = this.services[cmd.service];
+            if(state != undefined) {
+                if(state.script) {
+                    // remove the script node
+                    var head = document.getElementsByTagName('head');
+                    head[0].removeChild(state.script);
+                    // remove code extension
+                    delete this[cmd.service];
+                }
+                // remove the service state
+                delete this.services[cmd.service];
+                // inform stop listener of success
+                state.stop_def.callback(cmd);
+            }
         }
     };
 
@@ -320,25 +350,22 @@ if(!outfox) {
                     ob(value);
                 } catch(e) {
                 }
-                return;
-            } else if(this.error) {
-                throw new Error('already called');
+            } else {
+                this.callbacks.push(ob);
             }
-            this.callbacks.push(ob);
+            return this;
         },
 
         addErrback: function(ob) {
             if(this.error) {
                 try {
                     ob(value);
-                } catch(e) {
-                    
+                } catch(e) {       
                 }
-                return;
-            } else if(this.value) {
-                throw new Error('already called');
+            } else {
+                this.errbacks.push(ob);
             }
-            this.errbacks.push(ob);
+            return this;
         },
 
         callback: function(value) {

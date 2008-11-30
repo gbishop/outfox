@@ -5,7 +5,6 @@ the extension, accessing the extension from JavaScript, etc.
 
 See the LICENSE file for legal information.
 
-
 Todo List
 
 - catch exceptions at top level and send either error or failed-service
