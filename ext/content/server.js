@@ -134,8 +134,7 @@ utils.declare('outfox.ServerProxy', null, {
             var xml = istr_script.read(count);
             istr_script.close();
         } catch (e) {
-            var desc = 'Could not read services XML.';
-            throw new Error(this._buildFailure(desc));
+            throw new Error('Could not read services XML.');
         }
 
         try {
@@ -144,8 +143,7 @@ utils.declare('outfox.ServerProxy', null, {
             // parse into document
             var doc = parser.parseFromString(xml, 'text/xml');
         } catch(e) {
-            var desc = 'Could not parse services DOM.';
-            throw new Error(this._buildFailure(desc));
+            throw new Error('Could not parse services DOM.');
         }
         
         // pull all services sections; doc.getElementById not implemented
@@ -161,8 +159,7 @@ utils.declare('outfox.ServerProxy', null, {
         };
         
         if(service == null) {
-            var desc = 'Unknown service.';
-            throw new Error(this._buildFailure(desc));
+            throw new Error('Unknown service.');
         }
         return service;
     },
@@ -193,8 +190,7 @@ utils.declare('outfox.ServerProxy', null, {
             }
         }
         // failed to open a port
-        var desc = 'Could not find free port.';
-        throw new Error(this._buildFailure(desc));
+        throw new Error('Could not find free port.');
     },
 
     /**
@@ -211,10 +207,8 @@ utils.declare('outfox.ServerProxy', null, {
         for(var i=0; i<execs.length; i++) {
             var exec = execs[i];
             // build a file for the executable
-            logit('*** building file', exec.getAttribute('path'));
             var parts = [null, 'platform'];
             parts = parts.concat(exec.getAttribute('path').split('/'));
-            logit('*** building file', parts);
             var file = utils.buildPath.apply(utils, parts);
             try {
                 // try to make the file executable
@@ -230,7 +224,6 @@ utils.declare('outfox.ServerProxy', null, {
             for(var j=0; j<nodes.length; j++) {
                 args.push(nodes[j].getAttribute('value'));
             }
-            logit('*** arguments: ', args);
             try {
                 // try to launch to process
                 utils.runProcess(file, args, false);
@@ -242,8 +235,7 @@ utils.declare('outfox.ServerProxy', null, {
         }
         
         // indicate failure
-        var desc = 'Could not launch service process.'
-        throw new Error(this._buildFailure(desc));
+        throw new Error('Could not launch service process.');
     },
 
     /**

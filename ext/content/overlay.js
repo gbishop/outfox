@@ -14,7 +14,7 @@
 * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 * */
 const GUID = 'outfox@code.google.com';
-const ROOT_ID = 'outfox';
+const ROOT_ID = 'outfox@code.google.com';
 
 /**
 * Manages the creation of page controllers monitoring Outfox in/out queues and

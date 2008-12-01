@@ -127,15 +127,15 @@ class PygameChannelBase(ChannelBase):
         # start the common response message
         self.name = cmd.get('name')
         if self.name is not None:
-            msg = dict(name=self.name)
+            msg = dict(name=self.name, channel=self.id)
         else:
-            msg = {}
+            msg = dict(channel=self.id)
 
         # find an open player
         self.player = pygame.mixer.find_channel()
         if self.player is None:
             msg['action'] = 'error'
-            msg['description'] = 'no free output channel'
+            msg['description'] = 'No free output channel.'
             self._notify(msg)
             return
 
@@ -162,7 +162,6 @@ class PygameChannelBase(ChannelBase):
         self.done_action = 'finished-say'
 
         # notify on start
-        msg['channel'] = self.id
         msg['action'] = 'started-say'
         self._notify(msg)
 
@@ -170,15 +169,23 @@ class PygameChannelBase(ChannelBase):
         # start the common response message
         self.name = cmd.get('name')
         if self.name is not None:
-            msg = dict(name=self.name)
+            msg = dict(name=self.name, channel=self.id)
         else:
-            msg = {}
-
+            msg = dict(channel=self.id)
+        
+        # check if url is already known to be invalid
+        if cmd.get('invalid'):
+            msg['action'] = 'error'
+            msg['description'] = 'Bad sound URL.'
+            msg['url'] = cmd['url']
+            self._notify(msg)
+            return
+            
         # find an open player
         self.player = pygame.mixer.find_channel()
         if self.player is None:
             msg['action'] = 'error'
-            msg['description'] = 'no free output channel'
+            msg['description'] = 'No free output channel.'
             self._notify(msg)
             return
         # configure channel volume
@@ -193,7 +200,7 @@ class PygameChannelBase(ChannelBase):
                 fh = file(fn, 'rb')
             except IOError:
                 msg['action'] = 'error'
-                msg['description'] = 'bad sound file'
+                msg['description'] = 'Bad sound file.'
                 msg['filename'] = fn
                 self._notify(msg)
                 return
@@ -206,7 +213,7 @@ class PygameChannelBase(ChannelBase):
                 uh = urllib2.urlopen(cmd['url'])
             except urllib2.URLError:
                 msg['action'] = 'error'
-                msg['description'] = 'bad sound url'
+                msg['description'] = 'Bad sound URL.'
                 msg['url'] = cmd['url']
                 self._notify(msg)
                 return
@@ -216,7 +223,7 @@ class PygameChannelBase(ChannelBase):
         
         if snd is None:
             msg['action'] = 'error'
-            msg['description'] = 'bad sound format'
+            msg['description'] = 'Bad sound format.'
             msg['url'] = cmd['url']
             # bad sound format, abort
             self._notify(msg)
@@ -234,7 +241,6 @@ class PygameChannelBase(ChannelBase):
         self.done_action = 'finished-play'
 
         # notify on start
-        msg['channel'] = self.id
         msg['action'] = 'started-play'
         self._notify(msg)
 
@@ -276,8 +282,8 @@ class PygameChannelBase(ChannelBase):
         cfg = dict(voices=self._getVoices())
         cfg.update(self.config)
         self._notify({'action' : 'set-config',
-                                    'channel' : self.id,
-                                    'config' : cfg})
+                                 'channel' : self.id,
+                                 'config' : cfg})
 
     def setProperty(self, cmd):
         name = cmd['name']
@@ -298,9 +304,9 @@ class PygameChannelBase(ChannelBase):
         self.config[name] = val
         # notify observer
         self._notify({'channel' : self.id, 
-                                    'action' : 'set-property',
-                                    'name' : name,
-                                    'value' : val})
+                      'action' : 'set-property',
+                      'name' : name,
+                      'value' : val})
 
     def onBusyTick(self):
         while len(self.words):

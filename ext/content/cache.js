@@ -85,7 +85,7 @@ utils.declare('outfox.CacheController', null, {
                 }
                 logit('CacheController: invoking observer with filename', target);
                 // invoke the external observer with the filename
-                observer(reqid, target);
+                observer(reqid, target, false);
             }
         };
         
@@ -93,6 +93,7 @@ utils.declare('outfox.CacheController', null, {
         req.onreadystatechange = function(event) {
             logit('CacheController: ready state change', req.readyState);
             if(req.readyState == 4) {
+                logit('onreadystatechange status', req.status);
                 // http gives 200 on success, ftp or file gives 0
                 if(req.status == 200 || req.status == 0) {
                     // fetch the info from the cache asynchronously
@@ -106,14 +107,14 @@ utils.declare('outfox.CacheController', null, {
                                 // still need to callback with null so deferred
                                 // requests can be fulfilled
                                 logit('CacheController: failed to open new cache entry');
-                                observer(reqid, null);
+                                observer(reqid, null, false);
                             }
                         }, 0);
                 } else {
                     // still need to callback with null as the filename so any
                     // deferred requests can be fulfilled
                     logit('CacheController: failed to fetch new cache entry');
-                    observer(reqid, null);
+                    observer(reqid, null, true);
                 }
             }
         };

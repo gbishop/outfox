@@ -155,8 +155,8 @@ utils.declare('outfox.PageController', null, {
                 utils.bind(this, this._onResponse));
         } catch(e) {
             // put the exception into the incoming queue as a service failure
-            this._respond(e.message);
-            logit('PageController: failed to start service ' + e.message);
+            var json = this._buildFailure(cmd.service, e.message);
+            this._respond(json);
             return false;
         }
         this.services[cmd.service] = true;
@@ -188,11 +188,14 @@ utils.declare('outfox.PageController', null, {
             // define a callback for when the prefetch completes and
             // the cache entry is opened for filename access
             var self = this;
-            var obs = function(reqid, filename) {
+            var obs = function(reqid, filename, invalid) {
                 // change the action to indicate a deferred result
                 // which can be paired with the original based on the
                 // deferred request id
                 cmd.action = 'deferred-result';
+                // indicate that the url couldn't even be fetched so the
+                // service doesn't waste time doing it again
+                cmd.invalid = invalid;
                 if(filename) {
                     // attach the filename, if it exists
                     cmd.filename = filename;
@@ -211,5 +214,21 @@ utils.declare('outfox.PageController', null, {
         }
         // encode updated command as JSON
         return utils.toJson(cmd);
-    }    
+    },
+    
+    /**
+     * Builds a service failed response object, JSON encodes it, and returns 
+     * it.
+     *
+     * @param description Description of the failure
+     * @param service Name of the service
+     * @return Failure response object
+     */
+    _buildFailure: function(service, description) {
+        var resp = {};
+        resp.action = 'failed-service';
+        resp.description = description;
+        resp.service = service;
+        return utils.toJson(resp);
+    }
 });

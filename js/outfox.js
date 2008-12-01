@@ -39,13 +39,13 @@ if(!outfox) {
             }
             // create in and out queues
             this.root = document.createElement('div');
-            this.root.id = 'outfox';
+            this.root.id = 'outfox@code.google.com';
             // hide the outfox queues
             this.root.style.display = 'none';
             this.in_dom = document.createElement('div');
-            this.in_dom.id = 'outfox-in';
+            this.in_dom.id = this.root.id+'-in';
             this.out_dom = document.createElement('div');
-            this.out_dom.id = 'outfox-out';
+            this.out_dom.id = this.root.id+'-out';
             this.root.appendChild(this.in_dom);
             this.root.appendChild(this.out_dom);
             // monitor for incoming events
