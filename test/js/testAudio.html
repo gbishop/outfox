@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+  "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>Outfox Audio Tests</title>
+        <script type="text/javascript" src="dojo/dojo/dojo.js" djConfig="isDebug: true, popup: true"></script>
+        <script type="text/javascript" src="../../js/outfox.js"></script>
+        <script type="text/javascript">
+          dojo.require("doh.runner");
+          dojo.addOnLoad(function() {
+            doh.register("t", [
+              {
+                name : 'initialize',
+                runTest: function(t) {
+                  outfox.init('outfox', dojo.toJson, dojo.fromJson);
+                  var node = dojo.byId('outfox');
+                  doh.is(node.childNodes.length, 1);
+                  doh.is(node.firstChild.childNodes.length, 2);
+                }
+              },
+              
+              {
+                name : 'startService',
+                timeout: 5000,
+                runTest: function(t) {
+                  var def = new doh.Deferred();
+                  var start = outfox.startService('audio');
+                  start.addCallback(function(cmd) {
+                    def.callback(true);
+                  });
+                  start.addErrback(function(cmd) {
+                    def.errback(new Error(cmd.description));
+                  });
+                  return def;
+                }
+              },
+              
+              {
+                name : 'say',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                count : 0,
+                token : null,
+                onAudio: function(audio, cmd) {
+                  console.debug(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'set-config':
+                      ++this.count;
+                      break;
+                    case 'finished-say':
+                      // set config + start + 6 words
+                      doh.t(this.count == 8);
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.say('I am talking to test speech.');
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                }
+              },
+              
+              {
+                name : 'play',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                count : 0,
+                token : null,
+                onAudio: function(audio, cmd) {
+                  switch(cmd.action) {
+                    case 'started-play':
+                      ++this.count;
+                      break;
+                    case 'finished-play':
+                      doh.t(this.count == 1);
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.play(window.location.href + '../../../../js/sounds/Contact_On.mp3');
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                }
+              },
+
+              {
+                name : 'stopSay',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                count : 0,
+                token : null,
+                onAudio: function(audio, cmd) {
+                  switch(cmd.action) {
+                    case 'started-word':
+                      // stop after first word
+                      audio.stop();
+                    case 'started-say':
+                      ++this.count;
+                      break;
+                    case 'finished-say':
+                      // start + a few words only
+                      doh.t(this.count < 8);
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.say('I am talking to test speech.');
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                }
+              },
+
+              // stop play
+              // say, say
+              // say, play
+              // play, say
+              // play, play
+              // say + say
+              // say + play
+              // play + play
+              // say rate
+              // say volume
+              // say voice
+              // play repeat
+              // play error
+              // stopService
+            ]);
+            doh.run();
+          });
+        </script>
+  </head>
+  <body>
+    <div id="outfox"></div>
+  </body>
+</head>

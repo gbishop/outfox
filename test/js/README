@@ -1,0 +1,5 @@
+1. Put a copy of Dojo 1.2 or higher in a subfolder named "dojo" within
+   this folder.
+2. Make the root of this svn subtree (e.g., trunk, branches/<branch name>) 
+   web accessible.
+3. Visit test/js/runTests.html in your browser.
