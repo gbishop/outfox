@@ -52,7 +52,7 @@ class ChannelController(PygameChannelBase):
         self.tts.Voice = self.config['voice']
         a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
         self.tts.Rate = int(math.log(self.config['rate']/a, b))
-            
+
     def _synthWords(self, text):
         return tts.SynthWords(self.tts, text)
 
@@ -63,9 +63,8 @@ class ChannelController(PygameChannelBase):
         a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
         self.tts.Rate = int(math.log(val/a, b))
     
-    def _setSpeechVoice(self):
-        # store voice first
-        self.config[name] = val
-        # have to reinitialize the player to account for voices from
-        # different engines with different sampling rates
-        self._initializeEngine()
+    def _setSpeechVoice(self, val):
+        self.tts.Voice = val
+        a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
+        # adjust the rate based on the new voice
+        self.tts.Rate = int(math.log(self.config['rate']/a, b))
