@@ -1,4 +1,6 @@
 #!/bin/bash
+# get the version number
+VERSION=`grep em:version ext/install.rdf | tr -d ' ' | sed 's/^<.*>\([^<].*\)<.*>$/\1/'`
 # remove old extension build and staging area
 rm outfox*.xpi
 rm -rf build
@@ -17,4 +19,4 @@ do
 done
 # zip it up
 cd build
-zip -r ../outfox-$1.xpi * -x@../exclude.lst
+zip -r ../outfox-$VERSION.xpi * -x@../exclude.lst

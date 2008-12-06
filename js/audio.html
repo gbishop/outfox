@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+  "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>Outfox Audio Tests</title>
+    <style type="text/css">@import url("outfox.css");</style>
+    <script type="text/javascript" src="json2.js"></script>
+    <script type="text/javascript" src="outfox.js"></script>
+    <script type="text/javascript">
+    function onLoad(event) {
+        outfox.init("box", JSON.stringify, JSON.parse);
+        var def = outfox.startService("audio");
+        def.addCallback(function(cmd) {
+            outfox.audio.say('Greetings from Outfox!');
+            enableButtons(true);
+        });
+        def.addErrback(function(cmd) {
+            var box = document.getElementById('status');
+            box.innerHTML = cmd.description;
+        });
+    }
+
+    function enableButtons(run, stop) {
+        var buttons = document.getElementsByTagName('button');
+        for(var i=0; i < buttons.length; i++) {
+            var b = buttons[i];
+    	    if(b.id == 'stop') {
+    	        b.disabled = !stop;
+    	    } else {
+                b.disabled = !run;
+    	    }
+        }
+    }
+
+    function singleSpeech(button) {
+        enableButtons(false);
+        var node = document.getElementById('single-speech-text');
+        var token = outfox.audio.addObserver(function(tts, cmd) {
+            enableButtons(true);
+            tts.removeObserver(token);
+        }, 0, ['finished-say']);
+        outfox.audio.say(node.innerHTML);
+    
+    }
+
+    function singlePlay(button) {
+        enableButtons(false);
+        var token = outfox.audio.addObserver(function(tts, cmd) {
+            enableButtons(true);
+            tts.removeObserver(token);
+        }, 0, ['finished-play']);
+        outfox.audio.play(window.location.href+'/../sounds/Message_Received.mp3');
+    }
+
+    function queuing(button) {
+        var node = document.getElementById('queuing-text');
+        enableButtons(false);
+        var token = outfox.audio.addObserver(function(tts, cmd) {
+            enableButtons(true);
+            tts.removeObserver(token);
+        }, 0, ['finished-play']);
+        outfox.audio.say(node.innerHTML);
+        outfox.audio.play(window.location.href+'/../sounds/Message_Received.mp3');
+    }
+
+    function concurrency(button) {
+        var node = document.getElementById('concurrency-text');
+        enableButtons(false);
+        var count = 0;
+        var callback = function(tts, cmd) {
+            count++;
+            if(count == 2) {
+    	        enableButtons(true);
+                tts.removeObserver(token_speech);
+                tts.removeObserver(token_sound);
+            }
+        };
+        var token_speech = outfox.audio.addObserver(callback, 0, ['finished-say']);
+        var token_sound =  outfox.audio.addObserver(callback, 1, ['finished-play']);
+        outfox.audio.say(node.innerHTML);
+        outfox.audio.play(window.location.href+'/../sounds/Message_Received.mp3', 1);
+    }
+
+    function speechProperties(button) {
+        enableButtons(false);
+        var count = 0;
+        var token = outfox.audio.addObserver(function(tts, cmd) {
+            if(count == 0) {
+                count++;
+            } else if(count == 1) {
+    	        enableButtons(true);
+                tts.removeObserver(token);
+            }
+        }, 0, ['finished-say']);
+        outfox.audio.setProperty('rate', 100);
+        outfox.audio.setProperty('volume', 0.3);
+        var node = document.getElementById('speech-properties-text1');
+        outfox.audio.say(node.innerHTML);
+        outfox.audio.setProperty('rate', 500);
+        outfox.audio.setProperty('volume', 1.0);
+        var node = document.getElementById('speech-properties-text2');
+        outfox.audio.say(node.innerHTML);
+        outfox.audio.reset();
+    }
+
+    function soundPropertiesStart(button) {
+        enableButtons(false, true);
+        outfox.audio.setProperty('loop', true);
+        outfox.audio.play(window.location.href+'/../sounds/Message_Received.mp3');
+    }
+
+    function soundPropertiesStop() {
+        var button = document.getElementById('sound-properties-button');
+        enableButtons(true, false);
+        outfox.audio.stop();
+        outfox.audio.reset();
+    }
+
+    function callbacks(button) {
+        var logger = document.getElementById('callbacks-console');
+        enableButtons(false);
+        var count = 0;
+        var callback = function(tts, cmd) {
+            logger.innerHTML = JSON.stringify(cmd) + '\n' + logger.innerHTML;
+            if(cmd.action == 'finished-play' || cmd.action == 'finished-say') {
+                count++;
+            }
+            if(count == 2) {
+                enableButtons(true);
+                tts.removeObserver(token_speech);
+                tts.removeObserver(token_sound);
+            }
+        }
+        var token_speech = outfox.audio.addObserver(callback, 0);
+        var token_sound =  outfox.audio.addObserver(callback, 1);
+        var node = document.getElementById('callbacks-text');
+        outfox.audio.say(node.innerHTML, 0, 'my speech name');
+        outfox.audio.play(window.location.href+'/../sounds/Message_Received.mp3', 1, 'my sound name');
+    }
+
+    function caching(button) {
+        enableButtons(false);
+        var count = 0;
+        var token = outfox.audio.addObserver(function(tts, cmd) {
+            if(cmd.action == 'finished-play') {
+    	        ++count;
+    	        if(count == 3) {
+    		        enableButtons(true);
+    		        tts.removeObserver(token);
+    	        }
+            }
+        });
+        outfox.audio.play(window.location.href+'/../sounds/Contact_On.mp3');
+        outfox.audio.play(window.location.href+'/../sounds/Contact_Off.mp3');
+        outfox.audio.play(window.location.href+'/../sounds/Message_Received.mp3');
+    }
+    </script>
+  </head>
+  <body onload="onLoad()">
+    <h1>Outfox Audio Tests</h1>
+    <div id="status"></div>
+    <div id="box"></div>
+    <div class="menu"><a href="index.html">Samples Index</a></div>
+    <div>
+      <h2>Single Speech</h2>
+      <p id="single-speech-text">Click the button to speak this text.</p>
+      <button onclick="singleSpeech(this)" disabled="true">Run</button>
+    </div>
+    <div>
+      <h2>Single Sound</h2>
+      <p>Click the button to play a sound.</p>
+      <button onclick="singlePlay(this)" disabled="true">Run</button>
+    </div>
+    <div>
+      <h2>Queuing</h2>
+      <p id="queuing-text">Click the button to queue speech and then a sound.</p>
+      <button onclick="queuing(this)" disabled="true">Run</button>
+    </div>    
+    <div>
+      <h2>Caching</h2>
+      <p>Click the button to pull three sounds into the Firefox cache and play them sequentially.</p>
+      <button onclick="caching(this)" disabled="true">Run</button>
+    </div>
+    <div>
+      <h2>Concurrency</h2>
+      <p id="concurrency-text">Click the button to play speech and sound concurrently.</p>
+      <button onclick="concurrency(this)" disabled="true">Run</button>
+    </div>    
+    <div>
+      <h2>Speech Properties</h2>
+      <p><span id="speech-properties-text1">Click to hear a slow, soft sentence.</span> <span id="speech-properties-text2">Click to hear a louder, fast sentence.</span></p>
+      <button onclick="speechProperties(this)" disabled="true">Run</button>
+    </div>    
+    <div>
+      <h2>Sound Properties</h2>
+      <p>Click to hear a looping sound. Click the stop button to end it.</p>
+      <button id="sound-properties-button" onclick="soundPropertiesStart(this)" disabled="true">Run</button><button onclick="soundPropertiesStop()" disabled="true" id="stop">Stop</button>
+    </div>    
+    <div>
+      <h2>Callbacks</h2>
+      <p id="callbacks-text">Click to see speech and sound callbacks. The speech should finish last with the sound finishing somewhere in the middle.</p>
+      <textarea id="callbacks-console"></textarea>
+      <p><button onclick="callbacks(this)" disabled="true">Run</button></p>
+    </div>
+    <p class="copyright">Copyright (c) 2008 Carolina Computer Assistive Technology under the terms of the BSD license.</p>
+  </body>
+</html>

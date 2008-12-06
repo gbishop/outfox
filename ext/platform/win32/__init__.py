@@ -1,5 +1,5 @@
 '''
-Asyncore socket server, SAPI speech, and pygame sound/mixer for Windows.
+Root package for Python Windows services.
 
 Copyright (c) 2008 Carolina Computer Assistive Technology
 
@@ -15,51 +15,4 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-import os
-# need this to run pygame headless
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-from common.server import JSONServer
-import channel
-import asyncore
-import pygame.event
-import pygame.display
-import pygame.locals
-
-def buildServer(port):
-    return JSONServer(port)
-
-def buildChannel(ch_id):
-    return channel.ChannelController(ch_id)
-
-def shutdown():
-    event = pygame.event.Event(pygame.QUIT)
-    pygame.event.post(event)
-
-def run():
-    # have to init the damn display system to use sound, ugh
-    pygame.display.init()
-    # start the server thread with a timeout value
-    # pygame event loop
-    while 1:
-        # poll asyncore
-        asyncore.poll(0.05)
-        # look for an event
-        event = pygame.event.poll()
-        if event.type == pygame.NOEVENT:
-            chs = channel.getBusyChannels()
-            if len(chs):
-                # tick all channels that need busy callbacks
-                [ch.onBusyTick() for ch in chs]
-        elif event.type == pygame.locals.QUIT:
-            # exit the event loop
-            return
-        else:
-            # treat all other events as player completion
-            # pass them to channel based on event type 
-            # would be much easier if we could specify sound event properties...
-            ch = channel.getChannelFromId(event.type)
-            if ch is not None:
-                try:
-                    ch.onPlayerComplete()
-                except Exception, e:
-                    print e
+# nothing to do except exist ...

@@ -91,6 +91,9 @@ class ChannelBase(object):
         elif action == 'deferred-result':
             # process incoming deferred result
             self.deferred(cmd)
+        elif action == 'stop-service':
+            # shutdown this channel
+            self.shutdown(cmd)
         else:
             # queue command; slight waste of time if we immediately pull it back
             # out again, but it's clean
@@ -120,7 +123,7 @@ class ChannelBase(object):
         self.stalled_id = None
         self.deferreds = {}
 
-    def shutdown(self):
+    def shutdown(self, cmd):
         self.observer = None
 
     def _notify(self, msg):

@@ -56,10 +56,10 @@ excludes = [
     'pygame.imagext'
     ]
 typelibs = [('{C866CA3A-32F7-11D2-9602-00C04F8EE628}', 0, 5, 0)]
-packages = ['encodings', 'win32']
+packages = ['encodings', 'win32', 'common', 'simplejson']
 
 setup(console=["outfox.py"],
-      version='0.1.2',
+      version='0.2.0',
       options={"py2exe": {"compressed": 1,
                           'optimize': 2,
                           'excludes' : excludes,

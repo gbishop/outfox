@@ -16,7 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import objc
-from common.channel import ChannelBase
+from common.audio.channel import ChannelBase
 from Foundation import *
 from AppKit import *
 
@@ -40,11 +40,11 @@ class ChannelController(NSObject, ChannelBase):
         self.config['rate'] = 200
         self.config['loop'] = False
 
-    def shutdown(self):
+    def shutdown(self, cmd):
         self.stop()
         self.tts = None
         self.sound = None
-        ChannelBase.shutdown(self)
+        ChannelBase.shutdown(self, cmd)
     
     def reset(self):
         # reinitialize local config
@@ -87,6 +87,21 @@ class ChannelController(NSObject, ChannelBase):
         self._notify(msg)
 
     def play(self, cmd):
+        # start the common response message
+        self.name = cmd.get('name')
+        if self.name is not None:
+            msg = dict(name=self.name, channel=self.id)
+        else:
+            msg = dict(channel=self.id)
+
+        # check if url is already known to be invalid
+        if cmd.get('invalid'):
+            msg['action'] = 'error'
+            msg['description'] = 'Bad sound URL.'
+            msg['url'] = cmd['url']
+            self._notify(msg)
+            return    
+        
         fn = cmd.get('filename')
         if fn is not None:
             # allocate new sound object for file
@@ -97,9 +112,14 @@ class ChannelController(NSObject, ChannelBase):
             self.sound = NSSound.alloc().initWithContentsOfURL_byReference_(url, objc.NO)
         if not self.sound:
             # sound didn't initialize, abort
-            self._notify({'action' : 'error',
-                          'description' : 'bad sound url',
-                          'url' : cmd['url']});
+            msg['action'] = 'error'
+            if fn is not None:
+                msg['description'] = 'Bad sound file.'
+                msg['filename'] = fn
+            else:
+                msg['description'] = 'Bad sound URL.'                    
+                msg['url'] = cmd['url']
+            self._notify(msg)
             return
         self.sound.setDelegate_(self)
         # set current properties
@@ -110,9 +130,7 @@ class ChannelController(NSObject, ChannelBase):
         self.busy = True
 
         # notify on start
-        msg = {'channel' : self.id, 'action' : 'started-play'}
-        if self.name is not None:
-            msg['name'] = self.name
+        msg['action'] = 'started-play'
         self._notify(msg)
 
     def getConfig(self, cmd):

@@ -19,15 +19,15 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import simplejson
 import socket
 import sys
-from page import PageController
 
 DELIMITER = '\3'
 
 class Outfox(object):
-    def __init__(self, port):
+    def __init__(self, port, service):
         # map page IDs to page controllers
         self.pages = {}
         self.port = port
+        self.service = service
         self.module = None
 
     def run(self):
@@ -38,27 +38,27 @@ class Outfox(object):
             raise NotImplementedError('platform not supported')
 
         # launch the socket server
-        self.server = self.module.buildServer(self.port)
+        self.server = self.module.buildServer(self.module, self.port)
         # observe socket server messages so we can dispatch
         self.server.setObserver(self)
         # let the server connect
         self.server.doConnect()
 
         # let the module dictate what happens next
-        self.module.run()
-        print 'Outfox quit'
+        self.module.run(self.module)
 
     def fail(self):
         # open a socket to report the failure
         s = socket.socket()
         s.connect(('127.0.0.1', self.port))
-        cmd = {'action' : 'failed-init',
-               'description' : 'Outfox not supported on this platform.'}
+        cmd = {}
+        cmd['action'] = 'failed-service',
+        cmd['description'] = 'service not supported on this platform'
         msg = simplejson.dumps({'page_id' : '*', 'cmd' : cmd})
         s.sendall(msg+DELIMITER)
 
     def shutdown(self):
-        self.module.shutdown()
+        self.module.shutdown(self.module)
 
     def pushRequest(self, json):
         # decode the json
@@ -66,27 +66,24 @@ class Outfox(object):
         page_id = dec['page_id']
         cmd = dec['cmd']
 
-        # check if the command is a destroy
-        if cmd.get('action') == 'shutdown':
-            try:
-                page = self.pages[page_id]
-            except KeyError:
-                return
-            page.shutdown()
+        # get the page matching the given id
+        try:
+            page = self.pages[page_id]
+        except KeyError:
+            page = self.module.buildPage(self.module, page_id)
+            # register for responses for the page
+            page.setObserver(self)
+            self.pages[page_id] = page
+        # let the page controller dispatch the message
+        page.pushRequest(cmd)
+        # remove page reference if destroying, even if we just created
+        if cmd.get('action') == 'stop-service':
+            print 'stopping service for page', page_id
             del self.pages[page_id]
-        else:
-            # get the page matching the given id
-            try:
-                page = self.pages[page_id]
-            except KeyError:
-                page = PageController(page_id, self.module)
-                # register for responses for the page
-                page.setObserver(self)
-                self.pages[page_id] = page
-            # let the page controller dispatch the message
-            page.pushRequest(cmd)
 
     def pushResponse(self, page_id, cmd):
+        # add service name to the command
+        cmd['service'] = self.service
         # encode as json
         msg = simplejson.dumps({'page_id' : page_id, 'cmd' : cmd})
         # send using the server
@@ -101,22 +98,20 @@ class Outfox(object):
             pkg = 'nix'
         module = None
         try:
-            module = __import__(pkg)
+            name = '%s.%s' % (pkg, self.service)
+            module = __import__(name, globals(), locals(), [self.service])
         except Exception, e:
             print 'import failed', e
-            pass
         return module
 
 def main():
     import sys
-    # enable printing to a file on Windows
-    if sys.platform == 'win32':
-        sys.stdout = sys.stderr = open('c:/windows/temp/outfox.log', 'wt')
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception
     port = int(sys.argv[1])
+    service = sys.argv[2]
     # create the main controller
-    fs = Outfox(port)
+    fs = Outfox(port, service)
     fs.run()
 
 if __name__ == "__main__":
