@@ -112,12 +112,17 @@ class PygameChannelBase(ChannelBase):
 
     def stop(self):
         ChannelBase.stop(self)
-        self.done_action = None
         self.words = []
         unsetBusyChannel(self)
         if self.player:
             self.player.stop()
             self.player = None
+            # notify about end of stream now before another stream can sneak in
+            msg = {'channel' : self.id, 'action' : self.done_action}
+            if self.name is not None:
+                msg['name'] = self.name
+            self._notify(msg)
+        self.done_action = None
     
     def say(self, cmd):
         # make sure the speech string isn't empty; adhere to protocol
@@ -345,11 +350,12 @@ class PygameChannelBase(ChannelBase):
         # throw away our player reference
         self.player = None
 
-        # notify about end of stream
-        msg = {'channel' : self.id, 'action' : self.done_action}
-        if self.name is not None:
-            msg['name'] = self.name
-        self._notify(msg)
+        if self.done_action:
+            # notify about end of stream
+            msg = {'channel' : self.id, 'action' : self.done_action}
+            if self.name is not None:
+                msg['name'] = self.name
+            self._notify(msg)
 
         # reset stateful data
         self.words = []
