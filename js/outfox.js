@@ -91,7 +91,7 @@ if(!outfox) {
          */
         stopService: function(name) {
             var state = this.services[name];
-            if(state && state.action == 'started') {
+            if(state && state.status == 'started') {
                 // send stop if the service was started successfully
                 var cmd = {};
                 cmd.action = 'stop-service';

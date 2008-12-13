@@ -19,5 +19,5 @@ dojo.provide("outfox.test.js.main");
 doh.registerUrl(
     "outfox.test.js.TestAudio", 
     dojo.moduleUrl("outfox.test.js","testAudio.html"),
-    30000
+    1200000
 );

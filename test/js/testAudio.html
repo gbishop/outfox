@@ -6,6 +6,8 @@
         <script type="text/javascript" src="dojo/dojo/dojo.js" djConfig="isDebug: true, popup: true"></script>
         <script type="text/javascript" src="../../js/outfox.js"></script>
         <script type="text/javascript">
+          var sound1 = window.location.href + '../../../../js/sounds/Receive.mp3';
+          var sound2 = window.location.href + '../../../../js/sounds/Send.mp3';
           dojo.require("doh.runner");
           dojo.addOnLoad(function() {
             doh.register("t", [
@@ -21,11 +23,13 @@
               
               {
                 name : 'startService',
-                timeout: 5000,
+                timeout: 15000,
                 runTest: function(t) {
                   var def = new doh.Deferred();
                   var start = outfox.startService('audio');
                   start.addCallback(function(cmd) {
+                    doh.t(cmd.action == 'started-service');
+                    doh.t(cmd.service == 'audio');
                     def.callback(true);
                   });
                   start.addErrback(function(cmd) {
@@ -39,19 +43,24 @@
                 name : 'say',
                 timeout: 5000,
                 def : new doh.Deferred(),
-                count : 0,
+                count: 0,
+                commands : [],
+                target : ['set-config', 'started-say', 'started-word', 
+                  'started-word', 'started-word', 'finished-say'],
                 token : null,
                 onAudio: function(audio, cmd) {
-                  console.debug(cmd.action);
+                  this.commands.push(cmd.action);
                   switch(cmd.action) {
+                    // eat the initial config state push here
+                    case 'set-config':
                     case 'started-say':
                     case 'started-word':
-                    case 'set-config':
-                      ++this.count;
                       break;
                     case 'finished-say':
-                      // set config + start + 6 words
-                      doh.t(this.count == 8);
+                      for(var i=0; i < this.target.length; i++) {
+                        doh.t(this.target[i] == this.commands[i]);                          
+                      }
+                      // if we make it here, the commands match
                       this.def.callback(true);
                       break;
                     default:
@@ -60,7 +69,7 @@
                   }
                 },
                 runTest: function() {
-                  outfox.audio.say('I am talking to test speech.');
+                  outfox.audio.say('My first sentence.');
                   return this.def;
                 },
                 setUp: function() {
@@ -69,6 +78,8 @@
                 },
                 tearDown: function() {
                   outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
                 }
               },
               
@@ -93,7 +104,7 @@
                   }
                 },
                 runTest: function() {
-                  outfox.audio.play(window.location.href + '../../../../js/sounds/Contact_On.mp3');
+                  outfox.audio.play(sound1);
                   return this.def;
                 },
                 setUp: function() {
@@ -102,6 +113,38 @@
                 },
                 tearDown: function() {
                   outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+
+              {
+                name : 'playError',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                token : null,
+                onAudio: function(audio, cmd) {
+                  switch(cmd.action) {
+                    case 'error':
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.play(sound1+'foobar');
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
                 }
               },
 
@@ -115,6 +158,7 @@
                   switch(cmd.action) {
                     case 'started-word':
                       // stop after first word
+                      ++this.count;
                       audio.stop();
                     case 'started-say':
                       ++this.count;
@@ -139,23 +183,622 @@
                 },
                 tearDown: function() {
                   outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+              
+              {
+                name : 'stopPlay',
+                timeout: 1000,
+                def : new doh.Deferred(),
+                count : 0,
+                token : null,
+                onAudio: function(audio, cmd) {
+                  switch(cmd.action) {
+                    case 'started-play':
+                      // stop as soon as it starts, let the timeout be our test
+                      audio.stop();
+                      ++this.count;
+                      break;
+                    case 'finished-play':
+                      doh.t(this.count == 1);
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.play(sound1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
                 }
               },
 
-              // stop play
-              // say, say
-              // say, play
-              // play, say
-              // play, play
-              // say + say
-              // say + play
-              // play + play
-              // say rate
-              // say volume
-              // say voice
-              // play repeat
-              // play error
-              // stopService
+              {
+                name : 'saySay',
+                timeout: 10000,
+                def : new doh.Deferred(),
+                count: 0,
+                commands : [],
+                target : ['started-say', 'started-word', 'started-word', 
+                  'started-word', 'finished-say'],
+                token : null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                      break;
+                    case 'finished-say':
+                      if(this.count) {
+                        // check against double target
+                        var target = this.target.concat(this.target);
+                        for(var i=0; i < target.length; i++) {
+                          doh.t(target[i] == this.commands[i]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      } else {
+                        // look for the second finish
+                        ++this.count;
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.say('My first sentence.');
+                  outfox.audio.say('My second sentence.');
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+              
+              {
+                name : 'sayPlay',
+                timeout: 10000,
+                def : new doh.Deferred(),
+                commands : [],
+                target : ['started-say', 'started-word', 'started-word', 
+                  'started-word', 'finished-say', 'started-play', 
+                  'finished-play'],
+                token : null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'started-play':
+                    case 'finished-say':
+                      break;
+                    case 'finished-play':
+                      for(var i=0; i < this.target.length; i++) {
+                        doh.t(this.target[i] == this.commands[i]);
+                      }
+                      // if we make it here, the commands match
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.say('Say before play.');
+                  outfox.audio.play(sound1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+
+              {
+                name : 'playSay',
+                timeout: 10000,
+                def : new doh.Deferred(),
+                commands : [],
+                target : ['started-play', 'finished-play', 'started-say', 
+                  'started-word', 'started-word', 'started-word', 
+                  'finished-say'],
+                token : null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'started-play':
+                    case 'finished-play':
+                      break;
+                    case 'finished-say':
+                      for(var i=0; i < this.target.length; i++) {
+                        doh.t(this.target[i] == this.commands[i]);
+                      }
+                      // if we make it here, the commands match
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.play(sound1);
+                  outfox.audio.say('Play before say.');
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+
+              {
+                name : 'playPlay',
+                timeout: 10000,
+                def : new doh.Deferred(),
+                count: 0,
+                commands : [],
+                target : ['started-play', 'finished-play'],
+                token : null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-play':
+                      break;
+                    case 'finished-play':
+                      if(this.count) {
+                        // check against double target
+                        var target = this.target.concat(this.target);
+                        for(var i=0; i < target.length; i++) {
+                          doh.t(target[i] == this.commands[i]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      } else {
+                        // look for the second finish
+                        ++this.count;
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.play(sound1);
+                  outfox.audio.play(sound2);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+              
+              {
+                name : 'sayWhileSay',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                commands : {'started-say' : 0, 'started-word' : 0, 'finished-say' : 0},
+                target : {'started-say' : 2, 'started-word' : 6, 'finished-say' : 2},
+                token : null,
+                token1: null,
+                onAudio: function(audio, cmd) {
+                  ++this.commands[cmd.action];
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                      break;
+                    case 'finished-say':
+                      if(this.commands['finished-say'] == 2) {
+                        for(var key in this.target) {
+                          doh.t(this.target[key] == this.commands[key]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.say('Sally sells seashells.', 0);
+                  outfox.audio.say('By the seashore.', 1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func, 0);
+                  this.token1 = outfox.audio.addObserver(func, 1);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.removeObserver(this.token1);
+                  outfox.audio.stop(0);
+                  outfox.audio.stop(1);
+                  outfox.audio.reset(0);
+                  outfox.audio.reset(1);
+                }
+              },
+              
+              {
+                name : 'sayWhilePlay',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                commands : {'started-say' : 0, 'started-word' : 0, 'finished-say' : 0,
+                            'started-play' : 0, 'finished-play' : 0},
+                target : {'started-say' : 1, 'started-word' : 3, 'finished-say' : 1,
+                          'started-play' : 1, 'finished-play': 1},
+                token : null,
+                token1: null,
+                onAudio: function(audio, cmd) {
+                  ++this.commands[cmd.action];
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'started-play':
+                      break;
+                    case 'finished-say':
+                    case 'finished-play':
+                      if(this.commands['finished-say'] == 1 &&
+                         this.commands['finished-play'] == 1) {
+                        for(var key in this.target) {
+                          doh.t(this.target[key] == this.commands[key]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.say('Say while play.', 0);
+                  outfox.audio.play(sound1, 1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func, 0);
+                  this.token1 = outfox.audio.addObserver(func, 1);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.removeObserver(this.token1);
+                  outfox.audio.stop(0);
+                  outfox.audio.stop(1);
+                  outfox.audio.reset(0);
+                  outfox.audio.reset(1);
+                }
+              },
+
+              {
+                name : 'playWhilePlay',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                commands : {'started-play' : 0, 'finished-play' : 0},
+                target : {'started-play' : 2, 'finished-play' : 2},
+                token : null,
+                token1: null,
+                onAudio: function(audio, cmd) {
+                  ++this.commands[cmd.action];
+                  switch(cmd.action) {
+                    case 'started-play':
+                      break;
+                    case 'finished-play':
+                      if(this.commands['finished-play'] == 2) {
+                        for(var key in this.target) {
+                          doh.t(this.target[key] == this.commands[key]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.play(sound1, 0);
+                  outfox.audio.play(sound2, 1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func, 0);
+                  this.token1 = outfox.audio.addObserver(func, 1);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.removeObserver(this.token1);
+                  outfox.audio.stop(0);
+                  outfox.audio.stop(1);
+                  outfox.audio.reset(0);
+                  outfox.audio.reset(1);
+                }
+              },
+              
+              {
+                name : 'sayRate',
+                timeout: 1000,
+                def : new doh.Deferred(),
+                count: 0,
+                commands : [],
+                target : ['set-property', 'started-say', 'started-word', 'started-word', 
+                  'started-word', 'finished-say', 'set-property'],
+                token : null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'finished-say':
+                      break;
+                    case 'set-property':
+                      if(++this.count == 2) {
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('rate') == 200);
+                        for(var i=0; i < this.target.length; i++) {
+                          doh.t(this.target[i] == this.commands[i]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      } else {
+                        // make sure the property stuck                        
+                        doh.t(audio.getProperty('rate') == 600);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.setProperty('rate', 600)
+                  outfox.audio.say('My fast sentence.');
+                  outfox.audio.setProperty('rate', 200)                  
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop(0);
+                  outfox.audio.reset(0);
+                }
+              },
+
+              {
+                name : 'sayVolume',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                count: 0,
+                commands : [],
+                target : ['set-property', 'started-say', 'started-word', 'started-word', 
+                  'started-word', 'finished-say', 'set-property'],
+                token : null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'finished-say':
+                      break;
+                    case 'set-property':
+                      if(++this.count == 2) {
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('volume') == 1.0);                        
+                        for(var i=0; i < this.target.length; i++) {
+                          doh.t(this.target[i] == this.commands[i]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      } else {
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('volume') == 0.5);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.setProperty('volume', 0.1);
+                  outfox.audio.say('My quiet sentence.');
+                  outfox.audio.setProperty('volume', 1.0);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop(0);
+                  outfox.audio.reset(0);
+                }
+              },
+
+              {
+                name : 'sayVoice',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                count: 0,
+                commands : [],
+                target : ['set-property', 'started-say', 'started-word', 'started-word', 
+                  'started-word', 'finished-say', 'set-property'],
+                token : null,
+                voice1: '',
+                voice2: '',
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-say':
+                    case 'started-word':
+                    case 'finished-say':
+                      break;
+                    case 'set-property':
+                      if(++this.count == 2) {
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('voice') == this.voice1);
+                        for(var i=0; i < this.target.length; i++) {
+                          doh.t(this.target[i] == this.commands[i]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      } else {
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('voice') == this.voice2);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  var voices = outfox.audio.getProperty('voices');
+                  this.voice1 = voices[0];
+                  this.voice2 = voices[voices.length-1];
+                  outfox.audio.setProperty('voice', this.voice2);
+                  outfox.audio.say('My other personality.');
+                  outfox.audio.setProperty('voice', this.voice1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+
+              {
+                name : 'playLoop',
+                timeout: 15000,
+                def : new doh.Deferred(),
+                count: 0,
+                startTime: null,
+                stopTime: 8000,
+                commands : [],
+                target : ['set-property', 'started-play', 'finished-play', 'set-property'],
+                token : null,
+                timer: null,
+                onAudio: function(audio, cmd) {
+                  this.commands.push(cmd.action);
+                  switch(cmd.action) {
+                    case 'started-play':
+                    case 'finished-play':
+                      break;
+                    case 'set-property':
+                      if(++this.count == 2) {
+                        // make sure we looped
+                        doh.t((new Date() - this.startTime) > this.stopTime);
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('loop') == false);
+                        for(var i=0; i < this.target.length; i++) {
+                          doh.t(this.target[i] == this.commands[i]);                          
+                        }
+                        // if we make it here, the commands match
+                        this.def.callback(true);
+                      } else {
+                        // make sure the property stuck
+                        doh.t(audio.getProperty('loop') == true);
+                      }
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.setProperty('loop', true);
+                  this.startTime = new Date();
+                  outfox.audio.play(sound2);
+                  this.timer = setTimeout(function() {
+                    outfox.audio.stop();
+                    outfox.audio.setProperty('loop', false);
+                  }, this.stopTime);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                  clearTimeout(this.timer);
+                }
+              },
+
+              {
+                name : 'stopService',
+                timeout: 15000,
+                runTest: function(t) {
+                  var def = new doh.Deferred();
+                  var stop = outfox.stopService('audio');
+                  stop.addCallback(function(cmd) {
+                    doh.t(cmd.action == 'stopped-service');
+                    doh.t(cmd.service == 'audio');
+                    def.callback(true);
+                  });
+                  stop.addErrback(function(cmd) {
+                    def.errback(new Error(cmd.description));
+                  });
+                  return def;
+                }
+              },
             ]);
             doh.run();
           });
