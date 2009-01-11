@@ -60,7 +60,13 @@ class ChannelController(NSObject, ChannelBase):
             self.sound.setLoops_(self.config['loop'])
 
     def stop(self):
-        ChannelBase.stop(self)
+        # reset queue and flags 
+        self.queue = []
+        # don't reset name and busy until we get the stop callback
+        # reset deferreds
+        self.stalled_id = None
+        self.deferreds = {}
+        
         if self.tts is not None:
             self.tts.stopSpeaking()
         if self.sound is not None:
