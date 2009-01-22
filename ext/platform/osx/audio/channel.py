@@ -82,7 +82,7 @@ class ChannelController(NSObject, ChannelBase):
             self.tts.setVoice_(self.config['voice'])
             self.tts.setVolume_(self.config['volume'])
             self.tts.setRate_(self.config['rate'])
-        self.tts.startSpeakingString_(cmd['text'])
+        self.tts.startSpeakingString_(str(cmd['text']))
         self.busy = True
         self.name = cmd.get('name')
 

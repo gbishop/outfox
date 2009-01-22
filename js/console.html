@@ -8,10 +8,14 @@
     <script type="text/javascript" src="outfox.js"></script>
     <script type="text/javascript">
       function onLoad(event) {
-          outfox.init("outfox", JSON.stringify, JSON.parse);
+          outfox.init("outfox", JSON.stringify, JSON.parse).addCallback(function(version) {
+              console.debug(value);
+          });
           var def = outfox.startService("audio");
           def.addCallback(function(cmd) {
-              outfox.audio.addObserver(console.debug);
+              outfox.audio.addObserver(function(of, response) {
+                console.debug(response);
+              });
               outfox.audio.say('Outfox is ready.');
           });
           def.addErrback(function(cmd) {

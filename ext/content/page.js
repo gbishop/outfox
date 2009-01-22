@@ -53,6 +53,11 @@ utils.declare('outfox.PageController', null, {
         this.tokens = [];
         this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted', 
             this, '_onRequest'));
+            
+        // immediately report version number
+        var ver = {action: 'initialized-outfox', value: VERSION};
+        var json = utils.toJson(ver);
+        this._respond(json);
 
         // run through everything waiting in the outgoing queue and process it 
         while(this.out_queue.firstChild) {

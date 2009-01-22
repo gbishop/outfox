@@ -28,6 +28,8 @@ if(!outfox) {
             this.observers = {};
             // deferreds for service start by service name
             this.services = {};
+            // deferred for initialization
+            this.def_init = new outfox.Deferred();
 
             // json encode/decode
             this.encoder = encoder;
@@ -54,6 +56,7 @@ if(!outfox) {
             // append all at once so extension can find internal nodes once the 
             // outer one is added
             box.appendChild(this.root);
+            return this.def_init;
         },
 
         /**
@@ -165,8 +168,13 @@ if(!outfox) {
             var cmd = this.decoder(node.nodeValue);
             // destroy the DOM node first
             this.in_dom.removeChild(node);
+            // handle init response from extension
+            if(cmd.action == 'initialized-outfox') {
+                this.def_init.callback(cmd.value);
+                this.def_init = null;
+                return;
             // handle service start, stop, fail
-            if(cmd.action == 'started-service') {
+            } else if(cmd.action == 'started-service') {            
                 this._onServiceStarted(cmd);
                 return;
             } else if(cmd.action == 'failed-service') {
