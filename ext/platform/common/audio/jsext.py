@@ -184,6 +184,44 @@ reset: function(channel) {
 },
 
 /**
+ * Fetches all of the given urls so that they are in the local cache when
+ * later used. Useful for ensuring all sounds are local before playing them.
+ * Bad URLs and errors fetching data are ignored.
+ *
+ * @param urls Array of URLs
+ * @return Deferred invoked when all requests complete, successfully or not
+ */
+precache: function(urls) {
+    var done = urls.length;
+    var def = new outfox.Deferred();
+    for(var i=0; i < urls.length; i++) {
+        var url = urls[i];
+        var req = new XMLHttpRequest();
+        try {
+            req.open('GET', url, true);
+        } catch(e) {
+            // ignore bad urls to start
+            --done;
+            continue;
+        }
+        req.onreadystatechange = function(event) {
+            if(event.target.readyState == 4) {
+                --done;
+                console.debug(done);
+                if(done == 0) def.callback(true);
+            }
+        };
+        try {
+            req.send(null);
+        } catch(e) {
+            // ignore bad urls to start
+            --done;            
+        }
+    }
+    return def;
+},
+
+/**
  * Adds a listener for events in a channel. The listener signature should be
  *
  * function observer(audio, cmd)

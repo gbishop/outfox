@@ -353,10 +353,11 @@ if(!outfox) {
         },
 
         addCallback: function(ob) {
-            if(this.value) {
+            if(this.value != null) {
                 try {
-                    ob(value);
+                    ob(this.value);
                 } catch(e) {
+                    console.warn(e);
                 }
             } else {
                 this.callbacks.push(ob);
@@ -365,10 +366,11 @@ if(!outfox) {
         },
 
         addErrback: function(ob) {
-            if(this.error) {
+            if(this.error != null) {
                 try {
-                    ob(value);
-                } catch(e) {       
+                    ob(this.error);
+                } catch(e) {
+                    console.warn(e);
                 }
             } else {
                 this.errbacks.push(ob);

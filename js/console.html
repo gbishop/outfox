@@ -7,6 +7,10 @@
     <script type="text/javascript" src="json2.js"></script>
     <script type="text/javascript" src="outfox.js"></script>
     <script type="text/javascript">
+      var url = window.location.pathname.split('/').slice(0, -1).join('/');
+      url = 'http://' + window.location.hostname + url + '/sounds/';
+      var urls = [url+'Error.mp3' , url+'FileEnd.mp3', url+'FileRequest.mp3', 
+                  url+'FileStart.mp3', url+'New.mp3', url+'Off.mp3'];
       function onLoad(event) {
           outfox.init("outfox", JSON.stringify, JSON.parse).addCallback(function(version) {
               console.debug(value);
