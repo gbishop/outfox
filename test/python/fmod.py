@@ -13,7 +13,7 @@ class Debug(object):
             0.0, {'channel' : 0, 'action': 'play', 'url' : u'../../js/sounds/SignOff.mp3', 'name' : 'third'},
             #0.25, {'channel' : 1, 'action': 'play', 'url' : '../../js/sounds/SignOn.mp3', 'name' : 'fourth'},
             #0.5, {'channel' : 0, 'action': 'stop'},
-            #1.0, {'channel' : 0, 'action': 'play', 'url' : 'http://mindtrove.info/FileRequest.mp3'},
+            #1.0, {'channel' : 0, 'action': 'play', 'url' : 'http://www.cs.unc.edu/Research/assist/outfox/0.2.0/sounds/FileRequest.mp3'},
             10.0
         ]
         self.page = page
