@@ -6,14 +6,21 @@ rm outfox*.xpi
 rm -rf build
 # create staging area
 cp -r ext build
-# clean out win32 build area
+# copy win32 fmod into dist directory
+cp build/platform/win32/audio/fmodex.dll build/platform/dist/
+# clean out win32 source and build areas
 rm -rf build/platform/build
-# remove all svn cruft
+rm -rf build/platform/win32
+# remove all svn, pyc, and mac cruft
 find build | grep .svn$ | while read i
 do
   rm -rf $i
 done
 find build | grep .pyc$ | while read i
+do
+  rm -rf $i
+done
+find build | grep .DS_Store | while read i
 do
   rm -rf $i
 done

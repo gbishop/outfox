@@ -1,7 +1,7 @@
 '''
 Controller for a single page with multiple audio channels.
 
-Copyright (c) 2008 Carolina Computer Assistive Technology
+Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above

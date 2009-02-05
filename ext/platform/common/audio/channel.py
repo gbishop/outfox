@@ -2,7 +2,7 @@
 Abstract base class for audio speech and sound command processing. Provides
 methods shared among all platform implementations.
 
-Copyright (c) 2008 Carolina Computer Assistive Technology
+Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,15 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 class ChannelBase(object):
+    '''
+    @ivar id Integer channel ID assigned by client
+    @ivar observer Object observing channel responses
+    @ivar queue Array queue of commands to process
+    @ivar deferred Array of deferred commands to hold
+    @ivar stalled_id Integer deferred ID that stalled the queue last
+    @ivar busy Boolean busy flag for this channel
+    @ivar name String name of the last command to include in all responses
+    '''
     def __init__(self, ch_id):
         # unique id for this channel
         self.id = ch_id
@@ -35,6 +44,8 @@ class ChannelBase(object):
         # name assigned by the client to a speech utterance or sound that
         # can be paired with callback data
         self.name = None
+        # set config defaults
+        self._initializeConfig()
 
     def _processQueue(self):
         while (not self.busy) and len(self.queue):
@@ -61,6 +72,16 @@ class ChannelBase(object):
             # remember to pop the command
             cmd = self.queue.pop(0)
 
+    def _notify(self, action, **kwargs):
+        msg = {}
+        msg['channel'] = self.id
+        msg['action'] = action
+        if self.name is not None:
+            msg['name'] = self.name
+        msg.update(kwargs)
+        if self.observer is not None:
+            self.observer.pushResponse(msg)
+
     def _handleCommand(self, cmd):
         action = cmd.get('action')
         if action == 'say':
@@ -72,7 +93,7 @@ class ChannelBase(object):
         elif action == 'get-config':
             self.getConfig(cmd)
         elif action == 'reset-queued':
-            self.reset()
+            self.reset(cmd)
 
     def setObserver(self, ob):
         self.observer = ob
@@ -81,13 +102,13 @@ class ChannelBase(object):
         action = cmd.get('action')
         if action == 'stop':
             # process stops immediately
-            self.stop()
+            self.stop(cmd)
         elif action == 'set-now':
             # process immediate property changes
             self.setProperty(cmd)
         elif action == 'reset-now':
             # process immediate reset of all properties
-            self.reset()
+            self.reset(cmd)
         elif action == 'deferred-result':
             # process incoming deferred result
             self.deferred(cmd)
@@ -100,8 +121,36 @@ class ChannelBase(object):
             self.queue.append(cmd)
             # process the queue
             self._processQueue()
+            
+    def _initializeConfig(self):
+        '''Override to change the default channel configuration.'''
+        self.config = {}
+        self.config['volume'] = 0.9
+        self.config['rate'] = 200
+        self.config['loop'] = False
+        
+    def say(self, cmd):
+        '''Override to process a say command.'''
+        pass
+        
+    def play(self, cmd):
+        '''Override to process a play command.'''
+        pass
+        
+    def setProperty(self, cmd):
+        '''Override to process a property change command.'''        
+        pass
+        
+    def getConfig(self, cmd):
+        '''Override to process the initial configuration request command.'''
+        pass
+        
+    def reset(self, cmd):
+        '''Override to process a reset command for this channel.'''
+        self._initializeConfig()
 
     def deferred(self, cmd):
+        '''Override to process the result of a deferred command.'''
         try:
             reqid = cmd['deferred']
         except KeyError:
@@ -114,18 +163,16 @@ class ChannelBase(object):
             self._processQueue()
         # if not, just continue
 
-    def stop(self):
-        # reset queue and flags 
+    def stop(self, cmd):
+        '''Override to process a stop command.'''
+        # reset queue
         self.queue = []
-        self.busy = False
-        self.name = None
         # reset deferreds
         self.stalled_id = None
         self.deferreds = {}
-
+        # don't reset name and busy in case next callback needs them
+        
     def shutdown(self, cmd):
+        '''Overrid to process a handle shutdown command.'''
+        self.stop(cmd)
         self.observer = None
-
-    def _notify(self, msg):
-        if self.observer is not None:
-            self.observer.pushResponse(msg)

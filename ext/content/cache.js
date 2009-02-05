@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Carolina Computer Assistive Technology
+* Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 *
 * Permission to use, copy, modify, and distribute this software for any
 * purpose with or without fee is hereby granted, provided that the above
@@ -83,6 +83,8 @@ utils.declare('outfox.CacheController', null, {
                     // not cacheable, so make filename null
                     var target = null;
                 }
+                // close entry before proceeding
+                entry.close();
                 logit('CacheController: invoking observer with filename', target);
                 // invoke the external observer with the filename
                 observer(reqid, target, false);

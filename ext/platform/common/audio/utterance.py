@@ -1,5 +1,5 @@
 '''
-Root package for Python Windows services.
+Speech utterance waveform and word metadata.
 
 Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
@@ -15,4 +15,22 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-# nothing to do except exist ...
+
+class Utterance(object):
+    '''
+    @ivar text String utterance
+    @ivar samples Buffer of speech waveform samples
+    @ivar rate Integer waveform sampling rate in Hz
+    @ivar depth Integer sample bit depth in bits
+    @ivar channels Integer waveform channel count
+    @ivar words Array of (position, length, sample offset) tuples for words in
+        the utterance
+    '''
+    def __init__(self, text, samples='', rate=44100, depth=16, channels=1, 
+    words=[]):
+        self.text = text
+        self.samples = samples
+        self.rate = rate
+        self.depth = depth
+        self.channels = channels
+        self.words = words

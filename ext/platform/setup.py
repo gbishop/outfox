@@ -2,7 +2,7 @@
 '''
 Build script for Windows.
 
-Copyright (c) 2008 Carolina Computer Assistive Technology
+Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -17,54 +17,26 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 from distutils.core import setup
-try:
-    import py2exe
-except ImportError:
-    pass
+import py2exe
+import shutil
 
-dll_excludes = [
-    'jpeg.dll',
-    'libtiff.dll',
-    'libpng13.dll',
-    'SDL_image.dll',
-    'SDL_ttf.dll'
-    ]
-
+dll_excludes = []
 excludes = [
     'bz2',
     '_ssl',
-    '_hashlib',
-    'pygame.cdrom', 
-    'pygame.draw', 
-    'pygame.key',
-    'pygame.mouse',
-    'pygame.sprite',
-    'pygame.surface',
-    'pygame.mask',
-    'pygame.pixelarray',
-    'pygame.overlay',
-    'pygame.time',
-    'pygame.transform'
-    'pygame.font',
-    'pygame.sysfont',
-    'pygame.movie',
-    'pygame.movieext',
-    'pygame.scrap',
-    'pygame.surfarray',
-    'pygame.numpyarray',
-    'pygame.image',
-    'pygame.imagext'
-    ]
+    '_hashlib'
+]
 typelibs = [('{C866CA3A-32F7-11D2-9602-00C04F8EE628}', 0, 5, 0)]
 packages = ['encodings', 'win32', 'common', 'simplejson']
 
 setup(console=["outfox.py"],
-      version='0.2.1',
+      version='0.3.0',
       options={"py2exe": {"compressed": 1,
                           'optimize': 2,
                           'excludes' : excludes,
                           'dll_excludes': dll_excludes,
                           'typelibs': typelibs,
-                          'packages': packages
+                          'packages': packages,
+                          'bundle_files' : 1
                           }}
 )

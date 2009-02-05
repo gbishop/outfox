@@ -1,7 +1,7 @@
 '''
 Audio extension JavaScript interface.
 
-Copyright (c) 2008 Carolina Computer Assistive Technology
+Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -207,7 +207,6 @@ precache: function(urls) {
         req.onreadystatechange = function(event) {
             if(event.target.readyState == 4) {
                 --done;
-                console.debug(done);
                 if(done == 0) def.callback(true);
             }
         };

@@ -1,7 +1,7 @@
 '''
-Asyncore socket server, SAPI speech, and pygame sound/mixer for Windows.
+Asyncore socket server, SAPI speech, and FMOD sound/mixer for Windows.
 
-Copyright (c) 2008 Carolina Computer Assistive Technology
+Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -15,16 +15,16 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-import os
-# need this to run pygame headless
-os.environ["SDL_VIDEODRIVER"] = "dummy"
 from common.server import JSONServer
 from common.audio.page import PageController
 import channel
 import asyncore
-import pygame.event
-import pygame.display
-import pygame.locals
+import os
+from ctypes import *
+
+FMOD_MODULE = None
+FMOD_SYSTEM = c_void_p()
+RUNNING = True
 
 def buildServer(module, port):
     return JSONServer(port)
@@ -33,37 +33,30 @@ def buildPage(module, page_id):
     return PageController(page_id, module)
 
 def buildChannel(module, ch_id):
-    return channel.ChannelController(ch_id)
+    return channel.ChannelController(ch_id, FMOD_MODULE, FMOD_SYSTEM)
 
 def shutdown(module):
-    event = pygame.event.Event(pygame.QUIT)
-    pygame.event.post(event)
+    module.RUNNING = False
 
 def run(module):
-    # have to init the damn display system to use sound, ugh
-    pygame.display.init()
-    # start the server thread with a timeout value
-    # pygame event loop
-    while 1:
+    # load the FMOD dynamic lib, adjusting for py2exe build location
+    lib = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'fmodex.dll')
+    lib = os.path.abspath(lib)
+    fmod = windll.LoadLibrary(lib)
+    # create a global FMOD system object
+    if fmod.FMOD_System_Create(byref(FMOD_SYSTEM)):
+        raise RuntimeError
+    if fmod.FMOD_System_Init(FMOD_SYSTEM, 128, 0, None):
+        raise RuntimeError
+    # store FMOD globally for channels
+    module.FMOD_MODULE = fmod
+    
+    # main event loop polls json server and FMOD
+    while module.RUNNING:
         # poll asyncore
         asyncore.poll(0.05)
-        # look for an event
-        event = pygame.event.poll()
-        if event.type == pygame.NOEVENT:
-            chs = channel.getBusyChannels()
-            if len(chs):
-                # tick all channels that need busy callbacks
-                [ch.onBusyTick() for ch in chs]
-        elif event.type == pygame.locals.QUIT:
-            # exit the event loop
-            return
-        else:
-            # treat all other events as player completion
-            # pass them to channel based on event type 
-            # would be much easier if we could specify sound event properties...
-            ch = channel.getChannelFromId(event.type)
-            if ch is not None:
-                try:
-                    ch.onPlayerComplete()
-                except Exception, e:
-                    print e
+        # poll FMOD
+        fmod.FMOD_System_Update(FMOD_SYSTEM)
+    
+    # cleanup
+    fmod.FMOD_System_Release(FMOD_SYSTEM)

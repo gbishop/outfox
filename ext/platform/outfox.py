@@ -2,7 +2,7 @@
 '''
 Main controller for the speech servers.
 
-Copyright (c) 2008 Carolina Computer Assistive Technology
+Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -78,7 +78,6 @@ class Outfox(object):
         page.pushRequest(cmd)
         # remove page reference if destroying, even if we just created
         if cmd.get('action') == 'stop-service':
-            print 'stopping service for page', page_id
             del self.pages[page_id]
 
     def pushResponse(self, page_id, cmd):
@@ -115,5 +114,8 @@ def main():
     fs.run()
 
 if __name__ == "__main__":
-    print 'Launching Outfox I/O server ...'
+    import os
+    pid = os.getpid()
+    print 'Launching Outfox:', pid
     main()
+    print 'Quitting Outfox:', pid

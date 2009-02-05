@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Carolina Computer Assistive Technology
+* Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 *
 * Permission to use, copy, modify, and distribute this software for any
 * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
 * */
 const GUID = 'outfox@code.google.com';
 const ROOT_ID = 'outfox@code.google.com';
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 
 /**
 * Manages the creation of page controllers monitoring Outfox in/out queues and
