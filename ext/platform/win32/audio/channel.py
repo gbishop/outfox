@@ -51,16 +51,18 @@ class ChannelController(FMODSpeechBase):
 
     def reset(self, cmd):
         FMODSpeechBase.reset(self, cmd)
-        self._setSpeechVoice(self.default_voice)
+        self._setVoice(self.default_voice)
         
     def _getVoices(self):
         return self.tts.GetVoiceNames()
 
-    def _setSpeechRate(self, val):
+    def _setRate(self, val):
+        FMODSpeechBase._setRate(self, val)
         a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
         self.tts.Rate = int(math.log(val/a, b))
 
-    def _setSpeechVoice(self, val):
+    def _setVoice(self, val):
+        FMODSpeechBase._setVoice(self, val)
         self.tts.Voice = val
         a, b = E_REG.get(self.tts.Voice, E_REG['MSMary'])
         # adjust the rate based on the new voice
@@ -68,8 +70,7 @@ class ChannelController(FMODSpeechBase):
 
     def _synthesizeUtterance(self, text):
         # synthesize speech and events
-        stream, events = tts.Speak(text)
-
+        stream, events = self.tts.Speak(text)
         # return an empty utterance if we didn't synth any words
         if len(events) == 0:
             return Utterance(text)
@@ -77,11 +78,11 @@ class ChannelController(FMODSpeechBase):
         # get the waveform format information
         format = stream.Format.GetWaveFormatEx()
 
-        # get word information
-        meta = [(e.CharacterPosition, e.Length, e.StreamPosition)
+        # get word information, converting byte position to sample position
+        meta = [(e.CharacterPosition, e.Length, e.StreamPosition / 2)
             for e in events if e.EventType == tts.tts_event_word]
         
         # populate an utterance object
-        samples = stream.GetData()
+        samples = str(stream.GetData())
         return Utterance(text, samples, format.SamplesPerSec, 
             format.BitsPerSample, format.Channels, meta)

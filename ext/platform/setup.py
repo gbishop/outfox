@@ -36,7 +36,6 @@ setup(console=["outfox.py"],
                           'excludes' : excludes,
                           'dll_excludes': dll_excludes,
                           'typelibs': typelibs,
-                          'packages': packages,
-                          'bundle_files' : 1
+                          'packages': packages
                           }}
 )

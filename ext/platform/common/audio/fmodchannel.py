@@ -125,21 +125,16 @@ class FMODChannelBase(ChannelBase):
         '''
         pass
         
-    def _handleCommand(self, cmd):
+    def _onFMODComplete(self):
+        # notify about end of stream
+        self._notify(self.done_action)
+        
         # clean up any previous sound here before handling the next command
         if self.fch:
             snd = c_void_p()
             self.fmod.FMOD_Channel_GetCurrentSound(self.fch, byref(snd))
             self.fmod.FMOD_Sound_Release(snd)
             self.fch = None
-        ChannelBase._handleCommand(self, cmd)
-
-    def _onFMODComplete(self):
-        # notify about end of stream
-        self._notify(self.done_action)
-        
-        # do not clean up channel / sound here! it deadlocks FMOD update on
-        # some platforms
 
         # reset stateful data
         self.utterance = None
@@ -153,7 +148,6 @@ class FMODChannelBase(ChannelBase):
         if kind == FMOD_CHANNEL_CALLBACKTYPE_END:
             self._onFMODComplete()
         elif kind == FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT:
-            # @todo cast to int
             self._onFMODSyncPoint(cmd1)
         return FMOD_OK
     
@@ -170,10 +164,12 @@ class FMODChannelBase(ChannelBase):
         if self.fch:
             # clean up the playing FMOD channel and sound
             snd = c_void_p()
-            self.fmod.FMOD_Channel_Stop(self.fch)
-            self.fmod.FMOD_Channel_GetCurrentSound(self.fch, byref(snd))
-            self.fmod.FMOD_Sound_Release(snd)
-            self.fch = None
+            try:
+                # invoking stop immediately calls the callback and doesn't
+                # wait for FMOD_System_Update()
+                self.fmod.FMOD_Channel_Stop(self.fch)
+            except Exception, e:
+                pass
     
     def say(self, cmd):
         # make sure the speech string isn't empty; adhere to protocol of noop

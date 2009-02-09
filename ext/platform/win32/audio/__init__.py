@@ -52,11 +52,15 @@ def run(module):
     module.FMOD_MODULE = fmod
     
     # main event loop polls json server and FMOD
+    i = 0
     while module.RUNNING:
         # poll asyncore
         asyncore.poll(0.05)
-        # poll FMOD
-        fmod.FMOD_System_Update(FMOD_SYSTEM)
+        try:
+            # poll FMOD
+            fmod.FMOD_System_Update(FMOD_SYSTEM)
+        except Exception:
+            pass
     
     # cleanup
     fmod.FMOD_System_Release(FMOD_SYSTEM)

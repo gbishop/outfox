@@ -54,8 +54,11 @@ def run(module):
     while module.RUNNING:
         # poll asyncore
         asyncore.poll(0.05)
-        # poll FMOD
-        fmod.FMOD_System_Update(FMOD_SYSTEM)
+        try:
+            # poll FMOD
+            fmod.FMOD_System_Update(FMOD_SYSTEM)
+        except Exception:
+            pass
 
     # cleanup
     fmod.FMOD_System_Release(FMOD_SYSTEM)
