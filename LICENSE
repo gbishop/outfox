@@ -14,6 +14,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ---
 
-The Outfox Audio extension includes the FMOD Sound System, copyright (c) Firelight Technologies Pty, Ltd., 1994-2009.
+The Outfox Audio extension includes the FMOD Sound System, Copyright (c) Firelight Technologies Pty, Ltd., 1994-2009.
 
-FMOD products are available under a number of license types. See http://www.fmod.org/index.php/sales for details on using Outfox Audio / FMOD in your application.
+FMOD products are available under a number of license types. If you, the application developer, use Outfox Audio in your application, you are responsible for licensing FMOD. See http://www.fmod.org/index.php/sales for the various license types.

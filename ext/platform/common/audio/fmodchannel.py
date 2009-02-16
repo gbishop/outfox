@@ -28,6 +28,7 @@ FMOD_HARDWARE = 0x00000020
 FMOD_CHANNEL_CALLBACKTYPE_END = 0
 FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT = 2
 FMOD_UNICODE = 0x01000000
+FMOD_TIMEUNIT_PCM  = 0x00000002
 
 class FMODChannelBase(ChannelBase):
     '''
@@ -123,8 +124,10 @@ class FMODChannelBase(ChannelBase):
 
         @param index Integer sample offset of the sync point
         '''
-        pass
-        
+        if index == 0:
+            # notify on output start
+            self._notify('started-output')
+
     def _onFMODComplete(self):
         # notify about end of stream
         self._notify(self.done_action)
@@ -150,7 +153,7 @@ class FMODChannelBase(ChannelBase):
         elif kind == FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT:
             self._onFMODSyncPoint(cmd1)
         return FMOD_OK
-    
+
     def reset(self, cmd):
         ChannelBase.reset(self, cmd)
         # reset any playing channel properties
@@ -190,9 +193,6 @@ class FMODChannelBase(ChannelBase):
         self.done_action = 'finished-say'
         # notify on start
         self._notify('started-say')
-        
-    def stream(self, cmd):
-        pass
 
     def play(self, cmd, local):
         # check if url is already known to be invalid
@@ -233,7 +233,12 @@ class FMODChannelBase(ChannelBase):
             if self.fmod.FMOD_System_CreateStream(self.fsys, uri, flags, 
                 None, byref(snd)):
                 self._notify('error', description='Bad sound URL/filename.')
-                return            
+                return
+        
+        # set a marker on the first sample so we know when output starts
+        pt = c_void_p()
+        self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
+            byref(pt))
 
         # play the sound object, starting paused
         ch = c_void_p()

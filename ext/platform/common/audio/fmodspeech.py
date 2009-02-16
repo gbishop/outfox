@@ -83,8 +83,12 @@ class FMODSpeechBase(FMODChannelBase):
             self._notify('error', description='Bad speech buffer.')
             return False
             
-        # set word markers on the sound
+        # set a marker on the first sample so we know when output starts
         pt = c_void_p()
+        self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
+            byref(pt))
+            
+        # set word markers on the sound
         for word in utterance.words:
             self.fmod.FMOD_Sound_AddSyncPoint(snd, word[2], FMOD_TIMEUNIT_PCM, 
                 '', byref(pt))
@@ -122,5 +126,16 @@ class FMODSpeechBase(FMODChannelBase):
         return True
         
     def _onFMODSyncPoint(self, index):
+        if index == 0:
+            # first marker is to notify about output start
+            self._notify('started-output')
+            try:
+                if self.utterance.words[0][2] != 0:
+                    # if first word is not on first sample, return; it's just
+                    # the start marker
+                    return
+            except IndexError:
+                return
+        # notify about word info
         word = self.utterance.words.pop(0)
         self._notify('started-word', location=word[0], length=word[1])

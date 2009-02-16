@@ -29,6 +29,8 @@ class ChannelController(NSObject, FMODChannelBase):
             FMODChannelBase.__init__(self, ch_id, fmod, fsys)
             # speech synthesizer reference
             self.tts = None
+            # first word flag
+            self.first_word = False
         return self
 
     def _initializeConfig(self):
@@ -62,6 +64,8 @@ class ChannelController(NSObject, FMODChannelBase):
             self.tts.setVoice_(self.config['voice'])
             self.tts.setVolume_(self.config['volume'])
             self.tts.setRate_(self.config['rate'])
+        # flag first word so we can notify on output start
+        self.first_word = True
         # start speaking
         self.tts.startSpeakingString_(str(utterance.text))
         return True
@@ -89,12 +93,18 @@ class ChannelController(NSObject, FMODChannelBase):
             self.tts.setRate_(self.config['rate'])
 
     def speechSynthesizer_didFinishSpeaking_(self, tts, success):
+        if self.first_word:
+            self._notify('started-output')            
         self._notify(self.done_action)
         # reset stateful data
+        self.first_word = False
         self.busy = False
         self.name = None
         # process the queue
         self._processQueue()
 
     def speechSynthesizer_willSpeakWord_ofString_(self, tts, rng, text):
+        if self.first_word:
+            self._notify('started-output')
+            self.first_word = False
         self._notify('started-word', location=rng.location, length=rng.length)
