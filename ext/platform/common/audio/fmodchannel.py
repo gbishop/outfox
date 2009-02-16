@@ -190,19 +190,24 @@ class FMODChannelBase(ChannelBase):
         self.done_action = 'finished-say'
         # notify on start
         self._notify('started-say')
+        
+    def stream(self, cmd):
+        pass
 
-    def play(self, cmd):
+    def play(self, cmd, local):
         # check if url is already known to be invalid
         if cmd.get('invalid'):
             self._notify('error', description='Bad sound URL.', url=cmd['url'])
             return
         
-        # use local or remote uri
         try:
+            # use local filename, but decide stream/sound by local flag
             uri = cmd['filename']
         except KeyError:
             try:
+                # use remote url, but always stream
                 uri = cmd['url']
+                local = False
             except KeyError:
                 self._notify('error', description='Bad sound URL/filename.')
                 return
@@ -214,13 +219,21 @@ class FMODChannelBase(ChannelBase):
             flags = FMOD_HARDWARE|FMOD_2D|FMOD_LOOP_NORMAL
         else:
             flags = FMOD_DEFAULT
-        
-        # create a sound object
-        snd = c_void_p()
-        if self.fmod.FMOD_System_CreateSound(self.fsys, uri, flags, 
-            None, byref(snd)):
-            self._notify('error', description='Bad sound URL/filename.')
-            return
+
+        if local: 
+            # create a sound object, decode entirely in memory for playback
+            snd = c_void_p()
+            if self.fmod.FMOD_System_CreateSound(self.fsys, uri, flags, 
+                None, byref(snd)):
+                self._notify('error', description='Bad sound URL/filename.')
+                return
+        else:
+            # create a stream object, stream decoding and playback
+            snd = c_void_p()
+            if self.fmod.FMOD_System_CreateStream(self.fsys, uri, flags, 
+                None, byref(snd)):
+                self._notify('error', description='Bad sound URL/filename.')
+                return            
 
         # play the sound object, starting paused
         ch = c_void_p()

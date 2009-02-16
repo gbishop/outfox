@@ -71,12 +71,35 @@ say: function(text, channel, name) {
  */
 play: function(url, channel, name) {
     if(!url) return;
+    url = this._relToAbsUrl(url);
     var args = {};
     args.channel = channel || 0;
     args.url = url;
     if(typeof name != 'undefined')
         args.name = name;
     args.action = 'play';
+    args.cache = true;
+    this.send(args);
+},
+
+/**
+ * Stream a sound at a relative or absolute URL.
+ *
+ * @param url URL relative to the document invoking this method
+ * @param channel Channel to use to play (defaults to 0)
+ * @param name Name to include with any callbacks generated while playing
+ *   (defaults to no name)
+ */
+stream: function(url, channel, name) {
+    if(!url) return;
+    url = this._relToAbsUrl(url);
+    var args = {};
+    args.channel = channel || 0;
+    args.url = url;
+    if(typeof name != 'undefined')
+        args.name = name;
+    args.action = 'play';
+    args.cache = false;
     this.send(args);	
 },
 
@@ -257,6 +280,30 @@ removeObserver: function(token) {
             // remove the observer from the array
             this.observers[token[0]] = obs.slice(0,i).concat(obs.slice(i+1));
         }
+    }
+},
+
+/**
+ * Called to adjust a relative sound URL so that it is absolute.
+ *
+ * @param url Relative or absolute URL
+ * @return Absolute URL
+ */
+_relToAbsUrl: function(url) {
+    if(url.indexOf('http://') == 0 || url.indexOf('https://') == 0) {
+        // abs url
+        return url;
+    } else if(url.indexOf('/') == 0) {
+        // relative to server root
+        return window.location.protocol + '//' + window.location.host + url;
+    } else {
+        // relative to current path
+        var path = window.location.pathname;
+        if(path.lastIndexOf('/') != path.length-1) {
+            // remove filename from path
+            path = path.split('/').slice(0, -1).join('/') + '/';
+        }
+        return window.location.protocol + '//' + window.location.host + path + url;
     }
 },
 

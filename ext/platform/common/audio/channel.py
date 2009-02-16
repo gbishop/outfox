@@ -87,7 +87,9 @@ class ChannelBase(object):
         if action == 'say':
             self.say(cmd)
         elif action == 'play':
-            self.play(cmd)
+            self.play(cmd, True)
+        elif action == 'stream':
+            self.play(cmd, False)
         elif action == 'set-queued':
             self.setProperty(cmd)
         elif action == 'get-config':

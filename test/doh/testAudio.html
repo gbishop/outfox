@@ -6,8 +6,8 @@
         <script type="text/javascript" src="dojo/dojo/dojo.js" djConfig="isDebug: true, popup: true"></script>
         <script type="text/javascript" src="../../js/outfox.js"></script>
         <script type="text/javascript">
-          var sound1 = window.location.href + '../../../../js/sounds/Receive.mp3';
-          var sound2 = window.location.href + '../../../../js/sounds/Send.mp3';
+          var sound1 = '../samples/audio/sounds/Receive.mp3';
+          var sound2 = '../samples/audio/sounds/Send.mp3';
           dojo.require("doh.runner");
           dojo.addOnLoad(function() {
             doh.register("t", [
@@ -105,6 +105,41 @@
                 },
                 runTest: function() {
                   outfox.audio.play(sound1);
+                  return this.def;
+                },
+                setUp: function() {
+                  var func = dojo.hitch(this, this.onAudio);
+                  this.token = outfox.audio.addObserver(func);
+                },
+                tearDown: function() {
+                  outfox.audio.removeObserver(this.token);
+                  outfox.audio.stop();
+                  outfox.audio.reset();
+                }
+              },
+
+              {
+                name : 'stream',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                count : 0,
+                token : null,
+                onAudio: function(audio, cmd) {
+                  switch(cmd.action) {
+                    case 'started-play':
+                      ++this.count;
+                      break;
+                    case 'finished-play':
+                      doh.t(this.count == 1);
+                      this.def.callback(true);
+                      break;
+                    default:
+                      this.def.errback(new Error(cmd.action));
+                      break;
+                  }
+                },
+                runTest: function() {
+                  outfox.audio.stream(sound1);
                   return this.def;
                 },
                 setUp: function() {

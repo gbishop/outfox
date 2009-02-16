@@ -117,7 +117,7 @@ utils.declare('outfox.PageController', null, {
                 logit('PageController: success launching service', success);
                 // don't send the command if the service failed to start
                 if(!success) return;
-            } else if(cmd.url) {
+            } else if(cmd.cache) {
                 // use content from the browser disk cache if possible
                 // or try to cache it if not available
                 json = this._onCacheable(cmd);
