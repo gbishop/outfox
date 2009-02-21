@@ -144,8 +144,8 @@ class FMODChannelBase(ChannelBase):
         self.busy = False
         self.name = None
         self.done_action = None
-        # process the queue
-        self._processQueue()
+        # mark this channel ready for processing
+        ChannelBase.toProcess.append(self)
 
     def _onFMODChannelCallback(self, channel, kind, cmd1, cmd2):
         if kind == FMOD_CHANNEL_CALLBACKTYPE_END:

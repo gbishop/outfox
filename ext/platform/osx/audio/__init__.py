@@ -16,6 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import os
+from common.audio.channel import ChannelBase
 from ..server import JSONServer
 from common.audio.page import PageController
 from channel import ChannelController
@@ -33,7 +34,13 @@ class FMODTimer(object):
 
     def onTimer_(self, timer):
         if FMOD_SYSTEM is not None:
-            FMOD_MODULE.FMOD_System_Update(FMOD_SYSTEM)
+            try:
+                # update the FMOD system
+                FMOD_MODULE.FMOD_System_Update(FMOD_SYSTEM)
+            except Exception:
+                pass
+        # pump idle channels
+        [ch._processQueue() for ch in ChannelBase.toProcess]
 
 def buildServer(module, port):
     return JSONServer.alloc().initWithPort_(port)

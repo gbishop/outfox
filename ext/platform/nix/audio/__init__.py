@@ -16,6 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 from common.server import JSONServer
+from common.audio.channel import ChannelBase
 from common.audio.page import PageController
 import channel
 import asyncore
@@ -59,6 +60,8 @@ def run(module):
             fmod.FMOD_System_Update(FMOD_SYSTEM)
         except Exception:
             pass
+        # pump channels that are idle
+        [ch._processQueue() for ch in ChannelBase.toProcess]
 
     # cleanup
     fmod.FMOD_System_Release(FMOD_SYSTEM)

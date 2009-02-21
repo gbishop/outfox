@@ -27,6 +27,7 @@ class ChannelBase(object):
     @ivar busy Boolean busy flag for this channel
     @ivar name String name of the last command to include in all responses
     '''
+    toProcess = []
     def __init__(self, ch_id):
         # unique id for this channel
         self.id = ch_id

@@ -129,6 +129,8 @@ class FMODSpeechBase(FMODChannelBase):
         if index == 0:
             # first marker is to notify about output start
             self._notify('started-output')
+            if self.utterance is None:
+                return
             try:
                 if self.utterance.words[0][2] != 0:
                     # if first word is not on first sample, return; it's just
@@ -136,6 +138,11 @@ class FMODSpeechBase(FMODChannelBase):
                     return
             except IndexError:
                 return
-        # notify about word info
-        word = self.utterance.words.pop(0)
-        self._notify('started-word', location=word[0], length=word[1])
+        if self.utterance is None:
+            return
+        try:
+            # notify about word info
+            word = self.utterance.words.pop(0)
+            self._notify('started-word', location=word[0], length=word[1])
+        except IndexError:
+            return
