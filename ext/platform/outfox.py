@@ -34,8 +34,9 @@ class Outfox(object):
         # locate the proper module for this platform
         self.module = self._findModule()
         if self.module is None:
-            self.fail()
-            raise NotImplementedError('platform not supported')
+            msg = 'Service not supported on this platform'
+            self._notify('*', action='failed-service', description=msg)
+            raise NotImplementedError(msg)
 
         # launch the socket server
         self.server = self.module.buildServer(self.module, self.port)
@@ -46,36 +47,62 @@ class Outfox(object):
 
         # let the module dictate what happens next
         self.module.run(self.module)
-
-    def fail(self):
-        # open a socket to report the failure
-        s = socket.socket()
-        s.connect(('127.0.0.1', self.port))
-        cmd = {}
-        cmd['action'] = 'failed-service',
-        cmd['description'] = 'service not supported on this platform'
-        msg = simplejson.dumps({'page_id' : '*', 'cmd' : cmd})
-        s.sendall(msg+DELIMITER)
+        
+    def _notify(self, page_id, cmd=None, **kwargs):
+        if cmd is None:
+            cmd = {}
+            cmd.update(kwargs)
+        cmd['service'] = self.service
+        json = simplejson.dumps({'page_id' : page_id, 'cmd' : cmd})
+        if self.server:
+            # use the json server
+            self.server.sendMessage(json+DELIMITER)            
+        else:
+            # open a new socket to report the failure
+            s = socket.socket()
+            s.connect(('127.0.0.1', self.port))
+            s.sendall(msg+DELIMITER)            
 
     def shutdown(self):
         self.module.shutdown(self.module)
 
     def pushRequest(self, json):
-        # decode the json
-        dec = simplejson.loads(json)
-        page_id = dec['page_id']
-        cmd = dec['cmd']
-
-        # get the page matching the given id
         try:
+            # decode the json
+            dec = simplejson.loads(json)
+            page_id = dec['page_id']
+        except Exception:
+            # just ignore bad json or missing page IDs; don't know what page
+            # sent it
+            return
+
+        try:
+            # get the command
+            cmd = dec['cmd']
+        except KeyError:
+            # notify about missing commands
+            self._notify(page_id, action='error', 
+                description='Missing command payload.')
+            return
+
+        try:
+            # get the page matching the given id
             page = self.pages[page_id]
         except KeyError:
+            # build a new page and register as a observer
             page = self.module.buildPage(self.module, page_id)
-            # register for responses for the page
             page.setObserver(self)
             self.pages[page_id] = page
-        # let the page controller dispatch the message
-        page.pushRequest(cmd)
+            
+        try:
+            # let the page controller dispatch the message
+            page.pushRequest(cmd)
+        except Exception, e:
+            # if the service did not handle the error, something really bad
+            # happened so best that we notify that the entire service failed
+            self._notify('*', action='failed-service', description=str(e))
+            return
+
         # remove page reference if destroying, even if we just created
         if cmd.get('action') == 'stop-service':
             del self.pages[page_id]
@@ -106,8 +133,8 @@ class Outfox(object):
 def main():
     import sys
     pid = os.getpid()
-    #if sys.platform == 'win32':
-    #    sys.stdout = file('c:\\outfox.log', 'w')
+    if sys.platform == 'win32':
+        sys.stdout = file('c:\\outfox.log', 'w')
     print 'Launching Outfox:', pid
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception

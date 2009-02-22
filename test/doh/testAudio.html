@@ -94,8 +94,7 @@
                   outfox.audio.reset();
                 }
               },
-              
-              
+
               {
                 name : 'play',
                 timeout: 5000,
@@ -791,15 +790,14 @@
                 name : 'playLoop',
                 timeout: 15000,
                 def : new doh.Deferred(),
-                count: 0,
-                startTime: null,
-                stopTime: 4000,
+                stopTime: 6000,
                 commands : {'set-property' : 0, 'started-play' : 0, 'started-output' : 0, 'finished-play' : 0},
-                target : {'set-property' : 2, 'started-play' : 1, 'started-output' : 2, 'finished-play' : 1},
+                target : {'set-property' : 2, 'started-play' : 1, 'started-output' : 1, 'finished-play' : 1},
                 token : null,
                 timer: null,
                 onAudio: function(audio, cmd) {
                   ++this.commands[cmd.action];
+                  console.debug(cmd, this.commands['set-property']);
                   switch(cmd.action) {
                     case 'started-play':
                     case 'started-output':
@@ -807,12 +805,14 @@
                       break;
                     case 'set-property':
                       if(this.commands['set-property'] == 2) {
-                        // make sure we looped
-                        doh.t((new Date() - this.startTime) > this.stopTime);
                         // make sure the property stuck
                         doh.t(audio.getProperty('loop') == false);
                         for(var key in this.target) {
-                          doh.t(this.target[key] == this.commands[key]);                          
+                          if(key == 'started-output') {
+                            doh.t(this.commands[key] > this.target[key])
+                          } else {
+                            doh.t(this.target[key] == this.commands[key]);
+                          }
                         }
                         // if we make it here, the commands match
                         this.def.callback(true);
@@ -828,7 +828,6 @@
                 },
                 runTest: function() {
                   outfox.audio.setProperty('loop', true);
-                  this.startTime = new Date();
                   outfox.audio.play(sound2);
                   this.timer = setTimeout(function() {
                     outfox.audio.stop();

@@ -101,7 +101,7 @@ class ChannelController(NSObject, FMODChannelBase):
         self.busy = False
         self.name = None
         # process the queue
-        self._processQueue()
+        self._processQueue('finished speaking')
 
     def speechSynthesizer_willSpeakWord_ofString_(self, tts, rng, text):
         if self.first_word:

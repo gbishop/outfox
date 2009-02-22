@@ -24,9 +24,14 @@ from PyObjCTools import AppHelper
 from Foundation import NSTimer
 from ctypes import *
 
+# audio specific resources
 FMOD_MODULE = None
 FMOD_SYSTEM = c_void_p()
 
+def buildChannel(module, ch_id):
+    return ChannelController.alloc().initWithId_Module_System_(ch_id, 
+        FMOD_MODULE, FMOD_SYSTEM)
+    
 class FMODTimer(object):
     def __init__(self, delay):
         self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
@@ -40,17 +45,17 @@ class FMODTimer(object):
             except Exception:
                 pass
         # pump idle channels
-        [ch._processQueue() for ch in ChannelBase.toProcess]
+        ChannelBase.processPending()
 
+# common service functions
 def buildServer(module, port):
     return JSONServer.alloc().initWithPort_(port)
 
 def buildPage(module, page_id):
     return PageController(page_id, module)
-
-def buildChannel(module, ch_id):
-    return ChannelController.alloc().initWithId_Module_System_(ch_id, 
-        FMOD_MODULE, FMOD_SYSTEM)
+        
+def shutdown(module):
+    AppHelper.stopEventLoop()
 
 def run(module):
     global FMOD_SYSTEM
@@ -71,6 +76,3 @@ def run(module):
     # cleanup
     fmod.FMOD_System_Release(FMOD_SYSTEM)
     FMOD_SYSTEM = None
-
-def shutdown(module):
-    AppHelper.stopEventLoop()

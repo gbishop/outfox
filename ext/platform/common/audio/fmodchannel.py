@@ -152,7 +152,7 @@ class FMODChannelBase(ChannelBase):
         self.done_action = None
         self.done_cached = False
         # mark this channel ready for processing
-        ChannelBase.toProcess.append(self)
+        ChannelBase.processNext(self)
 
     def _onFMODChannelCallback(self, channel, kind, cmd1, cmd2):
         if kind == FMOD_CHANNEL_CALLBACKTYPE_END:

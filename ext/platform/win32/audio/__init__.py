@@ -23,18 +23,20 @@ import asyncore
 import os
 from ctypes import *
 
+# audio specific resources
 FMOD_MODULE = None
 FMOD_SYSTEM = c_void_p()
 RUNNING = True
 
+def buildChannel(module, ch_id):
+    return channel.ChannelController(ch_id, FMOD_MODULE, FMOD_SYSTEM)
+
+# common service functions
 def buildServer(module, port):
     return JSONServer(port)
 
 def buildPage(module, page_id):
     return PageController(page_id, module)
-
-def buildChannel(module, ch_id):
-    return channel.ChannelController(ch_id, FMOD_MODULE, FMOD_SYSTEM)
 
 def shutdown(module):
     module.RUNNING = False
@@ -63,7 +65,7 @@ def run(module):
         except Exception:
             pass
         # pump channels that are idle
-        [ch._processQueue() for ch in ChannelBase.toProcess]
+        ChannelBase.processPending()
     
     # cleanup
     fmod.FMOD_System_Release(FMOD_SYSTEM)

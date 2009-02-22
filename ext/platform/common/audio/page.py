@@ -15,6 +15,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
+from channel import ChannelBase
 import os
 import jsext
 
@@ -28,6 +29,12 @@ class PageController(object):
 
     def setObserver(self, ob):
         self.observer = ob
+        
+    def _notify(self, action, **kwargs):
+        cmd = {}
+        cmd['action'] = action
+        cmd.update(kwargs)
+        self.observer.pushResponse(self.id, cmd)
 
     def pushRequest(self, cmd):
         if cmd['action'] == 'start-service':
@@ -47,33 +54,27 @@ class PageController(object):
     def _onStart(self, cmd):
         if self.started:
             # make sure we haven't already started, if so, send an error
-            cmd = {}
-            cmd['action'] = 'failed-service'
-            cmd['description'] = 'service already started'
-            self.pushResponse(cmd)
+            self._notify('failed-service', 
+                description='Service already started.')
         else:
             # send the service started message with the JS extension
-            cmd = {}
-            cmd['action'] = 'started-service'
-            cmd['extension'] = jsext.CLASS
-            self.pushResponse(cmd)
+            self._notify('started-service', extension=jsext.CLASS)
             self.started = True
         
     def _onStop(self,cmd):
         if not self.started:
             # make sure we have started, if not, send an error
-            cmd = {}
-            cmd['action'] = 'failed-service'
-            cmd['description'] = 'service not started'
-            self.pushResponse(cmd)
+            self._notify('failed-service', description='Service not started.')
         else:
-            # send all services the stop message
+            # send all channels the stop message
             for ch in self.channels.values():
-                ch.pushRequest(cmd)
+                try:
+                    ch.pushRequest(cmd)
+                except Exception, e:
+                    # ignore any errors during shutdown
+                    pass
             # tell the requester that the service is stopped
-            cmd = {}
-            cmd['action'] = 'stopped-service'
-            self.pushResponse(cmd)
+            self._notify('stopped-service')
             # clean up the observer
             self.observer = None
             self.started = False
@@ -89,4 +90,13 @@ class PageController(object):
             ch = self.module.buildChannel(self.module, ch_id)
             ch.setObserver(self)
             self.channels[ch_id] = ch
-        ch.pushRequest(cmd)
+            
+        try:
+            # give the command to the channel to handle
+            ch.pushRequest(cmd)
+        except Exception, e:
+            # if the channel raises an exception, notify the client of an error
+            # also, mark the channel as needing processing on the next run loop
+            # iteration so it doesn't stall indefinitely
+            self._notify('error', description=str(e), channel=ch.id)
+            ChannelBase.processNext(ch)
