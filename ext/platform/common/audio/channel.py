@@ -19,6 +19,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 class ChannelBase(object):
     '''
+    @cvar toProcess List of channels that need queue processing
     @ivar id Integer channel ID assigned by client
     @ivar observer Object observing channel responses
     @ivar queue Array queue of commands to process
@@ -176,6 +177,6 @@ class ChannelBase(object):
         # don't reset name and busy in case next callback needs them
         
     def shutdown(self, cmd):
-        '''Overrid to process a handle shutdown command.'''
+        '''Override to process a handle shutdown command.'''
         self.stop(cmd)
         self.observer = None

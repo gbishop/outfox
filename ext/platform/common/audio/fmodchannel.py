@@ -22,9 +22,11 @@ from channel import ChannelBase
 FMOD_OK = 0
 FMOD_CHANNEL_FREE = -1
 FMOD_DEFAULT = 0x00000000
+FMOD_LOOP_OFF = 0x00000001
 FMOD_LOOP_NORMAL = 0x00000002
 FMOD_2D = 0x00000008
 FMOD_HARDWARE = 0x00000020
+FMOD_SOFTWARE = 0x00000040
 FMOD_CHANNEL_CALLBACKTYPE_END = 0
 FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT = 2
 FMOD_UNICODE = 0x01000000
@@ -56,6 +58,10 @@ class FMODChannelBase(ChannelBase):
         self.utterance = None
         # whether we're playing speech or sound
         self.done_action = None
+        # in memory cache of small sounds that ff did not cache on disk
+        self.sound_cache = {}
+        # whether we're playing a cached sound or not
+        self.done_cached = False
 
     def _synthesizeUtterance(self, text):
         '''
@@ -98,7 +104,7 @@ class FMODChannelBase(ChannelBase):
         @param val Integer rate in words per minute
         '''
         if self.fch is not None:
-            self.fmod.FMOD_Channel_SetVolume(self.fch, val)
+            self.fmod.FMOD_Channel_SetVolume(self.fch, c_float(val))
 
     def _setVoice(self, val):
         '''
@@ -133,7 +139,7 @@ class FMODChannelBase(ChannelBase):
         self._notify(self.done_action)
         
         # clean up any previous sound here before handling the next command
-        if self.fch:
+        if self.fch and not self.done_cached:
             snd = c_void_p()
             self.fmod.FMOD_Channel_GetCurrentSound(self.fch, byref(snd))
             self.fmod.FMOD_Sound_Release(snd)
@@ -144,6 +150,7 @@ class FMODChannelBase(ChannelBase):
         self.busy = False
         self.name = None
         self.done_action = None
+        self.done_cached = False
         # mark this channel ready for processing
         ChannelBase.toProcess.append(self)
 
@@ -153,6 +160,53 @@ class FMODChannelBase(ChannelBase):
         elif kind == FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT:
             self._onFMODSyncPoint(cmd1)
         return FMOD_OK
+        
+    def _buildFMODAudio(self, cmd, local):
+        # default to not caching sound in memory
+        self.done_cached = False
+        try:
+            # use local filename, but decide stream/sound by local flag
+            uri = cmd['filename']
+        except KeyError:
+            try:
+                # use remote url
+                uri = cmd['url']
+            except KeyError:
+                self._notify('error', description='Bad sound URL/filename.')
+                return
+            if cmd['cache'] == True:
+                # treat as a sound and store it in the memory cache
+                local = True
+                self.done_cached = True
+            else:
+                # treat as a stream and never cache
+                local = False
+        # have to encode because FMOD unicode flag doesn't seem to work
+        uri = uri.encode('utf-8')
+        
+        # always allow for looping
+        flags = FMOD_SOFTWARE|FMOD_2D|FMOD_LOOP_NORMAL
+
+        if local: 
+            # create a sound object, decode entirely in memory for playback
+            snd = c_void_p()
+            if self.fmod.FMOD_System_CreateSound(self.fsys, uri, flags, 
+                None, byref(snd)):
+                self._notify('error', description='Bad sound URL/filename.')
+                return None
+        else:
+            # create a stream object, stream decoding and playback
+            snd = c_void_p()
+            if self.fmod.FMOD_System_CreateStream(self.fsys, uri, flags, 
+                None, byref(snd)):
+                self._notify('error', description='Bad sound URL/filename.')
+                return None
+        
+        if self.done_cached:
+            # cache sound in memory
+            self.sound_cache[uri] = snd
+            
+        return snd
 
     def reset(self, cmd):
         ChannelBase.reset(self, cmd)
@@ -160,6 +214,10 @@ class FMODChannelBase(ChannelBase):
         if self.fch:
             self._setVolume(self.config['volume'])
             self._setLooping(self.config['loop'])
+            # free up sounds in the memory cache
+            [self.fmod.FMOD_Sound_Release(snd) 
+                for snd in self.sound_cache.values()]
+            self.sound_cache = {}
 
     def stop(self, cmd):
         # allow base class to clear
@@ -201,44 +259,18 @@ class FMODChannelBase(ChannelBase):
             return
         
         try:
-            # use local filename, but decide stream/sound by local flag
-            uri = cmd['filename']
+            # try to fetch a sound from the in-memory cache
+            snd = self.sound_cache[cmd['url'].encode('utf-8')]
+            self.done_cached = True
         except KeyError:
-            try:
-                # use remote url, but always stream
-                uri = cmd['url']
-                local = False
-            except KeyError:
-                self._notify('error', description='Bad sound URL/filename.')
-                return
-        # have to encode because FMOD unicode flag doesn't seem to work
-        uri = uri.encode('utf-8')
-        
-        # decide looping or not
-        if self.config['loop']:
-            flags = FMOD_HARDWARE|FMOD_2D|FMOD_LOOP_NORMAL
-        else:
-            flags = FMOD_DEFAULT
-
-        if local: 
-            # create a sound object, decode entirely in memory for playback
-            snd = c_void_p()
-            if self.fmod.FMOD_System_CreateSound(self.fsys, uri, flags, 
-                None, byref(snd)):
-                self._notify('error', description='Bad sound URL/filename.')
-                return
-        else:
-            # create a stream object, stream decoding and playback
-            snd = c_void_p()
-            if self.fmod.FMOD_System_CreateStream(self.fsys, uri, flags, 
-                None, byref(snd)):
-                self._notify('error', description='Bad sound URL/filename.')
-                return
-        
-        # set a marker on the first sample so we know when output starts
-        pt = c_void_p()
-        self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
-            byref(pt))
+            # build a new sound or stream, set done_cached also
+            snd = self._buildFMODAudio(cmd, local)
+            # leave if sound was not created; method already notified client
+            if snd is None: return
+            # set a marker on the first sample so we know when output starts
+            pt = c_void_p()
+            self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
+                byref(pt))
 
         # play the sound object, starting paused
         ch = c_void_p()
@@ -255,6 +287,11 @@ class FMODChannelBase(ChannelBase):
             return
         if self.fmod.FMOD_Channel_SetVolume(ch, c_float(self.config['volume'])):
             self._notify('error', description='Cannot set sound volume.')
+            self.fmod.FMOD_Sound_Release(snd)
+            return
+        count = -1 if self.config['loop'] else 0
+        if self.fmod.FMOD_Channel_SetLoopCount(ch, count):
+            self._notify('error', description='Cannot set looping.')
             self.fmod.FMOD_Sound_Release(snd)
             return
 

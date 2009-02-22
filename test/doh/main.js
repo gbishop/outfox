@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Carolina Computer Assistive Technology
+* Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 *
 * Permission to use, copy, modify, and distribute this software for any
 * purpose with or without fee is hereby granted, provided that the above
@@ -14,10 +14,16 @@
 * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 * 
 */
-dojo.provide("outfox.test.js.main"); 
+dojo.provide("outfox.test.doh.main"); 
 
 doh.registerUrl(
-    "outfox.test.js.TestAudio", 
-    dojo.moduleUrl("outfox.test.js","testAudio.html"),
+    "outfox.test.doh.TestAudio", 
+    dojo.moduleUrl("outfox.test.doh","testAudio.html"),
+    1200000
+);
+
+doh.registerUrl(
+    "outfox.test.doh.TestAudioBugs", 
+    dojo.moduleUrl("outfox.test.doh","testAudioBugs.html"),
     1200000
 );

@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+  "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>Outfox Audio Bug Tests</title>
+        <script type="text/javascript" src="dojo/dojo/dojo.js" djConfig="isDebug: true, popup: true"></script>
+        <script type="text/javascript" src="../../js/outfox.js"></script>
+        <script type="text/javascript">
+          var shortSound = '../samples/audio/sounds/Horse.mp3';
+          dojo.require("doh.runner");
+          dojo.addOnLoad(function() {
+            // start outfox without testing it
+            outfox.init('outfox', dojo.toJson, dojo.fromJson);
+            outfox.startService('audio').addCallback(function() {            
+              doh.register("t", [
+                {
+                   name : 'playShortSound',
+                   timeout: 10000,
+                   def : new doh.Deferred(),
+                   count: 0,
+                   commands : [],
+                   target : ['started-play', 'started-output', 'finished-play'],
+                   token : null,
+                   onAudio: function(audio, cmd) {
+                     if(cmd.action == 'set-config') return;
+                     this.commands.push(cmd.action);
+                     switch(cmd.action) {
+                       case 'started-play':
+                       case 'started-output':
+                         break;
+                       case 'finished-play':
+                         if(this.count == 2) {
+                           // check against triple target
+                           var target = this.target.concat(this.target);
+                           target = this.target.concat(target);
+                           for(var i=0; i < target.length; i++) {
+                             doh.t(target[i] == this.commands[i]);                          
+                           }
+                           // if we make it here, the commands match
+                           this.def.callback(true);
+                         } else {
+                           // look for the second finish
+                           ++this.count;
+                         }
+                         break;
+                       default:
+                         this.def.errback(new Error(cmd.action));
+                         break;
+                     }
+                   },
+                   runTest: function() {
+                     for(var i=0; i < 3; i++) {
+                       outfox.audio.play(shortSound);
+                     }
+                     return this.def;
+                   },
+                   setUp: function() {
+                     var func = dojo.hitch(this, this.onAudio);
+                     this.token = outfox.audio.addObserver(func);
+                   },
+                   tearDown: function() {
+                     outfox.audio.removeObserver(this.token);
+                     outfox.audio.stop();
+                     outfox.audio.reset();
+                   }
+                 }
+              ]);
+              doh.run();
+            });
+          });
+        </script>
+  </head>
+  <body>
+    <div id="outfox"></div>
+  </body>
+</head>

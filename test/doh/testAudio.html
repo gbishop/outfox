@@ -2,7 +2,7 @@
   "http://www.w3.org/TR/html4/strict.dtd">
 <html>
   <head>
-    <title>Outfox Audio Tests</title>
+    <title>Outfox Basic Audio Tests</title>
         <script type="text/javascript" src="dojo/dojo/dojo.js" djConfig="isDebug: true, popup: true"></script>
         <script type="text/javascript" src="../../js/outfox.js"></script>
         <script type="text/javascript">
@@ -13,11 +13,22 @@
             doh.register("t", [
               {
                 name : 'initialize',
+                timeout: 5000,
+                def : new doh.Deferred(),
+                onReady: function(version) {
+                  if(typeof(version) == 'undefined') {
+                    this.def.errback(new Error('missing version number'));
+                  } else {
+                    this.def.callback(true);
+                  }
+                },
                 runTest: function(t) {
-                  outfox.init('outfox', dojo.toJson, dojo.fromJson);
+                  var odef = outfox.init('outfox', dojo.toJson, dojo.fromJson);
+                  odef.addCallback(dojo.hitch(this, 'onReady'));
                   var node = dojo.byId('outfox');
                   doh.is(node.childNodes.length, 1);
                   doh.is(node.firstChild.childNodes.length, 2);
+                  return this.def;
                 }
               },
               
@@ -45,14 +56,15 @@
                 def : new doh.Deferred(),
                 count: 0,
                 commands : [],
-                target : ['set-config', 'started-say', 'started-word', 
-                  'started-word', 'started-word', 'finished-say'],
+                target : ['set-config', 'started-say', 'started-output', 
+                  'started-word', 'started-word', 'started-word', 'finished-say'],
                 token : null,
                 onAudio: function(audio, cmd) {
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     // eat the initial config state push here
                     case 'set-config':
+                    case 'started-output':
                     case 'started-say':
                     case 'started-word':
                       break;
@@ -83,6 +95,7 @@
                 }
               },
               
+              
               {
                 name : 'play',
                 timeout: 5000,
@@ -92,10 +105,11 @@
                 onAudio: function(audio, cmd) {
                   switch(cmd.action) {
                     case 'started-play':
+                    case 'started-output':
                       ++this.count;
                       break;
                     case 'finished-play':
-                      doh.t(this.count == 1);
+                      doh.t(this.count == 2);
                       this.def.callback(true);
                       break;
                     default:
@@ -127,10 +141,11 @@
                 onAudio: function(audio, cmd) {
                   switch(cmd.action) {
                     case 'started-play':
+                    case 'started-output':
                       ++this.count;
                       break;
                     case 'finished-play':
-                      doh.t(this.count == 1);
+                      doh.t(this.count == 2);
                       this.def.callback(true);
                       break;
                     default:
@@ -196,11 +211,12 @@
                       ++this.count;
                       audio.stop();
                     case 'started-say':
+                    case 'started-output':
                       ++this.count;
                       break;
                     case 'finished-say':
                       // start + a few words only
-                      doh.t(this.count < 8);
+                      doh.t(this.count < 9);
                       this.def.callback(true);
                       break;
                     default:
@@ -222,7 +238,7 @@
                   outfox.audio.reset();
                 }
               },
-              
+
               {
                 name : 'stopPlay',
                 timeout: 1000,
@@ -232,12 +248,15 @@
                 onAudio: function(audio, cmd) {
                   switch(cmd.action) {
                     case 'started-play':
-                      // stop as soon as it starts, let the timeout be our test
-                      audio.stop();
                       ++this.count;
                       break;
+                    case 'started-output':
+                      ++this.count;
+                      // stop as soon as it starts, let the timeout be our test
+                      audio.stop();
+                      break;
                     case 'finished-play':
-                      doh.t(this.count == 1);
+                      doh.t(this.count == 2);
                       this.def.callback(true);
                       break;
                     default:
@@ -266,13 +285,14 @@
                 def : new doh.Deferred(),
                 count: 0,
                 commands : [],
-                target : ['started-say', 'started-word', 'started-word', 
-                  'started-word', 'finished-say'],
+                target : ['started-say', 'started-output', 'started-word', 
+                  'started-word', 'started-word', 'finished-say'],
                 token : null,
                 onAudio: function(audio, cmd) {
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     case 'started-say':
+                    case 'started-output':
                     case 'started-word':
                       break;
                     case 'finished-say':
@@ -309,15 +329,15 @@
                   outfox.audio.reset();
                 }
               },
-              
+
               {
                 name : 'sayPlay',
                 timeout: 10000,
                 def : new doh.Deferred(),
                 commands : [],
-                target : ['started-say', 'started-word', 'started-word', 
-                  'started-word', 'finished-say', 'started-play', 
-                  'finished-play'],
+                target : ['started-say', 'started-output', 'started-word', 
+                  'started-word', 'started-word', 'finished-say', 
+                  'started-play', 'started-output', 'finished-play'],
                 token : null,
                 onAudio: function(audio, cmd) {
                   this.commands.push(cmd.action);
@@ -326,6 +346,7 @@
                     case 'started-word':
                     case 'started-play':
                     case 'finished-say':
+                    case 'started-output':
                       break;
                     case 'finished-play':
                       for(var i=0; i < this.target.length; i++) {
@@ -360,7 +381,8 @@
                 timeout: 10000,
                 def : new doh.Deferred(),
                 commands : [],
-                target : ['started-play', 'finished-play', 'started-say', 
+                target : ['started-play', 'started-output', 'finished-play', 
+                  'started-say', 'started-output',
                   'started-word', 'started-word', 'started-word', 
                   'finished-say'],
                 token : null,
@@ -368,6 +390,7 @@
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     case 'started-say':
+                    case 'started-output':
                     case 'started-word':
                     case 'started-play':
                     case 'finished-play':
@@ -406,12 +429,13 @@
                 def : new doh.Deferred(),
                 count: 0,
                 commands : [],
-                target : ['started-play', 'finished-play'],
+                target : ['started-play', 'started-output', 'finished-play'],
                 token : null,
                 onAudio: function(audio, cmd) {
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     case 'started-play':
+                    case 'started-output':
                       break;
                     case 'finished-play':
                       if(this.count) {
@@ -447,19 +471,20 @@
                   outfox.audio.reset();
                 }
               },
-              
+
               {
                 name : 'sayWhileSay',
                 timeout: 5000,
                 def : new doh.Deferred(),
-                commands : {'started-say' : 0, 'started-word' : 0, 'finished-say' : 0},
-                target : {'started-say' : 2, 'started-word' : 6, 'finished-say' : 2},
+                commands : {'started-say' : 0, 'started-output' : 0, 'started-word' : 0, 'finished-say' : 0},
+                target : {'started-say' : 2, 'started-output' : 2, 'started-word' : 6, 'finished-say' : 2},
                 token : null,
                 token1: null,
                 onAudio: function(audio, cmd) {
                   ++this.commands[cmd.action];
                   switch(cmd.action) {
                     case 'started-say':
+                    case 'started-output':
                     case 'started-word':
                       break;
                     case 'finished-say':
@@ -495,14 +520,14 @@
                   outfox.audio.reset(1);
                 }
               },
-              
+
               {
                 name : 'sayWhilePlay',
                 timeout: 5000,
                 def : new doh.Deferred(),
-                commands : {'started-say' : 0, 'started-word' : 0, 'finished-say' : 0,
+                commands : {'started-say' : 0, 'started-output' : 0, 'started-word' : 0, 'finished-say' : 0,
                             'started-play' : 0, 'finished-play' : 0},
-                target : {'started-say' : 1, 'started-word' : 3, 'finished-say' : 1,
+                target : {'started-say' : 1, 'started-output' : 2, 'started-word' : 3, 'finished-say' : 1,
                           'started-play' : 1, 'finished-play': 1},
                 token : null,
                 token1: null,
@@ -512,6 +537,7 @@
                     case 'started-say':
                     case 'started-word':
                     case 'started-play':
+                    case 'started-output':
                       break;
                     case 'finished-say':
                     case 'finished-play':
@@ -553,14 +579,15 @@
                 name : 'playWhilePlay',
                 timeout: 5000,
                 def : new doh.Deferred(),
-                commands : {'started-play' : 0, 'finished-play' : 0},
-                target : {'started-play' : 2, 'finished-play' : 2},
+                commands : {'started-play' : 0, 'started-output' : 0, 'finished-play' : 0},
+                target : {'started-play' : 2, 'started-output' : 2, 'finished-play' : 2},
                 token : null,
                 token1: null,
                 onAudio: function(audio, cmd) {
                   ++this.commands[cmd.action];
                   switch(cmd.action) {
                     case 'started-play':
+                    case 'started-output':
                       break;
                     case 'finished-play':
                       if(this.commands['finished-play'] == 2) {
@@ -595,20 +622,21 @@
                   outfox.audio.reset(1);
                 }
               },
-              
+
               {
                 name : 'sayRate',
                 timeout: 1000,
                 def : new doh.Deferred(),
                 count: 0,
                 commands : [],
-                target : ['set-property', 'started-say', 'started-word', 'started-word', 
+                target : ['set-property', 'started-say', 'started-output', 'started-word', 'started-word', 
                   'started-word', 'finished-say', 'set-property'],
                 token : null,
                 onAudio: function(audio, cmd) {
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     case 'started-say':
+                    case 'started-output':
                     case 'started-word':
                     case 'finished-say':
                       break;
@@ -654,13 +682,14 @@
                 def : new doh.Deferred(),
                 count: 0,
                 commands : [],
-                target : ['set-property', 'started-say', 'started-word', 'started-word', 
+                target : ['set-property', 'started-say', 'started-output', 'started-word', 'started-word', 
                   'started-word', 'finished-say', 'set-property'],
                 token : null,
                 onAudio: function(audio, cmd) {
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     case 'started-say':
+                    case 'started-output':
                     case 'started-word':
                     case 'finished-say':
                       break;
@@ -706,7 +735,7 @@
                 def : new doh.Deferred(),
                 count: 0,
                 commands : [],
-                target : ['set-property', 'started-say', 'started-word', 'started-word', 
+                target : ['set-property', 'started-say', 'started-output', 'started-word', 'started-word', 
                   'started-word', 'finished-say', 'set-property'],
                 token : null,
                 voice1: '',
@@ -715,6 +744,7 @@
                   this.commands.push(cmd.action);
                   switch(cmd.action) {
                     case 'started-say':
+                    case 'started-output':
                     case 'started-word':
                     case 'finished-say':
                       break;
@@ -763,25 +793,26 @@
                 def : new doh.Deferred(),
                 count: 0,
                 startTime: null,
-                stopTime: 8000,
-                commands : [],
-                target : ['set-property', 'started-play', 'finished-play', 'set-property'],
+                stopTime: 4000,
+                commands : {'set-property' : 0, 'started-play' : 0, 'started-output' : 0, 'finished-play' : 0},
+                target : {'set-property' : 2, 'started-play' : 1, 'started-output' : 2, 'finished-play' : 1},
                 token : null,
                 timer: null,
                 onAudio: function(audio, cmd) {
-                  this.commands.push(cmd.action);
+                  ++this.commands[cmd.action];
                   switch(cmd.action) {
                     case 'started-play':
+                    case 'started-output':
                     case 'finished-play':
                       break;
                     case 'set-property':
-                      if(++this.count == 2) {
+                      if(this.commands['set-property'] == 2) {
                         // make sure we looped
                         doh.t((new Date() - this.startTime) > this.stopTime);
                         // make sure the property stuck
                         doh.t(audio.getProperty('loop') == false);
-                        for(var i=0; i < this.target.length; i++) {
-                          doh.t(this.target[i] == this.commands[i]);                          
+                        for(var key in this.target) {
+                          doh.t(this.target[key] == this.commands[key]);                          
                         }
                         // if we make it here, the commands match
                         this.def.callback(true);
@@ -833,7 +864,7 @@
                   });
                   return def;
                 }
-              },
+              }
             ]);
             doh.run();
           });

@@ -2,4 +2,4 @@
    this folder.
 2. Make the root of this svn subtree (e.g., trunk, branches/<branch name>) 
    web accessible.
-3. Visit test/js/runTests.html in your browser.
+3. Visit test/doh/runTests.html in your browser.

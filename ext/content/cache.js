@@ -15,6 +15,9 @@
 * 
 */
 
+// constants for cache exceptions
+NS_ERROR_CACHE_WAIT_FOR_VALIDATION = 2152398912;
+
 /**
  * Manages the caching of URL data in the Firefox disk cache for services.
  */
@@ -28,8 +31,8 @@ utils.declare('outfox.CacheController', null, {
         this.ios = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
         this.nsic = Components.interfaces.nsICache;
         this.sess = cs.createSession('HTTP', this.nsic.STORE_ON_DISK, this.nsic.STREAM_BASED);
-        // @todo: need second session for non-stream based resources
         this.reqid = 0;
+        this.pending = [];
         logit('CacheController: initialized');
     },
 
@@ -37,22 +40,75 @@ utils.declare('outfox.CacheController', null, {
      * Gets the local disk cache filename for the given URL.
      *
      * @param url URL key for the cache
+     * @return Object with state and target (optional) properties
      */
     getLocalFilename: function(url) {
         // get canonical url to match with cache
         var uri = this.ios.newURI(url, null, null);
         url = uri.asciiSpec;
         try {
-            var entry = this.sess.openCacheEntry(url, this.nsic.ACCESS_READ, this.nsic.BLOCKING);
+            var entry = this.sess.openCacheEntry(url, this.nsic.ACCESS_READ, 
+                this.nsic.NON_BLOCKING);
         } catch(e) {
-            return null;
+            if(e.result == NS_ERROR_CACHE_WAIT_FOR_VALIDATION) {
+                // file is downloading
+                logit('CacheController: cache wait for validation', url);
+                return {state : 'pending'};
+            } else {
+                logit('CacheController: cache entry missing', url);
+                // file is not in the cache, but could be added
+                return {state : 'missing'};
+            }
         }
-        // this may throw an exception; if it does, it means this item will
-        // never be available in the disk cache
-        var target = entry.file.path;
-        logit('CacheController: found cached file at', target);
+        try {
+            var target = entry.file.path;
+        } catch(e) {
+            logit('CacheController: not disk cacheable', url);
+            // file is uncacheable on disk
+            return {state : 'uncacheable'};
+        }
         entry.close();
-        return target;
+        logit('CacheController: cache file', target);
+        return {state : 'ok', target : target};
+    },
+    
+    /**
+     * Monitors a URL for cache entry validation after a fetch.
+     *
+     * @param url String URL
+     * @param observer Observer to invoke when the cache item is free
+     */
+    monitor: function(url, observer) {
+        // get canonical url
+        var uri = this.ios.newURI(url, null, null);
+        url = uri.asciiSpec;
+        // generate new request ID
+        var reqid = this.reqid++;
+        // store the url and observer for later notification
+        this.pending.push({url : url, reqid : reqid, observer : observer});
+        return reqid;
+    },
+    
+    /**
+     * Processes pending URLs monitored for cache validation.
+     *
+     * @param url String URL
+     * @param filename String filename of the cached entry or null
+     * @param invalid True of invalid URL, false if valid
+     */
+    _processPending: function(url, filename, invalid) {
+        var saved = [];
+        for(var i=0; i < this.pending.length; i++) {
+            if(this.pending[i].url == url) {
+                // invoke the observer
+                this.pending[i].observer(this.pending[i].reqid, filename, 
+                    invalid);
+            } else {
+                // still pending, save for later
+                saved.push(this.pending[i]);
+            }
+        }
+        this.pending = saved;
     },
 
     /** 
@@ -66,7 +122,6 @@ utils.declare('outfox.CacheController', null, {
         // get canonical url
         var uri = this.ios.newURI(url, null, null);
         url = uri.asciiSpec;
-        logit('CacheController: fetching url for cache', url);
 
         var reqid = this.reqid++;
         var req = new XMLHttpRequest();
@@ -75,6 +130,7 @@ utils.declare('outfox.CacheController', null, {
         // define a callback for asynchronous cache entry opening
         // can't do sync within the ready state change context because the
         //  cache entry is still held open by the xhr in there (deadlock!)
+        var self = this;
         var cache_obs = {
             onCacheEntryAvailable: function(entry, access, status) {
                 try {
@@ -85,17 +141,15 @@ utils.declare('outfox.CacheController', null, {
                 }
                 // close entry before proceeding
                 entry.close();
-                logit('CacheController: invoking observer with filename', target);
+                logit('CacheController: opened new cache entry', target);
                 // invoke the external observer with the filename
                 observer(reqid, target, false);
+                // pump pending requests
+                self._processPending(url, target, false);
             }
         };
-        
-        var self = this;
         req.onreadystatechange = function(event) {
-            logit('CacheController: ready state change', req.readyState);
             if(req.readyState == 4) {
-                logit('onreadystatechange status', req.status);
                 // http gives 200 on success, ftp or file gives 0
                 if(req.status == 200 || req.status == 0) {
                     // fetch the info from the cache asynchronously
@@ -104,12 +158,13 @@ utils.declare('outfox.CacheController', null, {
                             self.sess.asyncOpenCacheEntry(url, 
                                 self.nsic.ACCESS_READ,
                                 cache_obs);
-                                logit('CacheController: opened new cache entry');
                             } catch (e) {
                                 // still need to callback with null so deferred
                                 // requests can be fulfilled
                                 logit('CacheController: failed to open new cache entry');
                                 observer(reqid, null, false);
+                                // pump pending requests
+                                self._processPending(url, null, false);
                             }
                         }, 0);
                 } else {
@@ -117,6 +172,8 @@ utils.declare('outfox.CacheController', null, {
                     // deferred requests can be fulfilled
                     logit('CacheController: failed to fetch new cache entry');
                     observer(reqid, null, true);
+                    // pump pending requests
+                    self._processPending(url, null, true);
                 }
             }
         };

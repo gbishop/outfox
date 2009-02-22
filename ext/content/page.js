@@ -182,14 +182,12 @@ utils.declare('outfox.PageController', null, {
         // request containing a URL that we might be able to cache
         var fn;
         // check if url is cached
-        try {
-            fn = this.cache.getLocalFilename(cmd.url);
-        } catch(e) {
-            // any exception here means the file isn't cacheable
-            // leave fn undefined
-            logit('PageController: cache entry exists, but file not on disk');
-        }
-        if(fn === null) {
+        var obj = this.cache.getLocalFilename(cmd.url);
+        if(obj.state == 'ok') {
+            // make the command with the local cached copy filename
+            // in case the external server can make use of it instead
+            cmd.filename = obj.target;
+        } else if(obj.state != 'uncacheable') {
             // define a callback for when the prefetch completes and
             // the cache entry is opened for filename access
             var self = this;
@@ -208,15 +206,18 @@ utils.declare('outfox.PageController', null, {
                 // send the command to the proper service
                 self.factory.send(self.id, cmd.service, utils.toJson(cmd));
             }
-            // prefetch url
-            var reqid = this.cache.fetch(cmd.url, obs);
+            if(obj.state == 'missing') {
+                // fetch to cache
+                var reqid = this.cache.fetch(cmd.url, obs);
+            } else if(obj.state == 'pending') {
+                // monitor while pending
+                var reqid = this.cache.monitor(cmd.url, obs);
+            }
             // mark command as deferred for now
             cmd.deferred = reqid;
-        } else if(fn != undefined){
-            // make the command with the local cached copy filename
-            // in case the external server can make use of it instead
-            cmd.filename = fn;
         }
+        // nothing to do for the uncacheable state
+        
         // encode updated command as JSON
         return utils.toJson(cmd);
     },
