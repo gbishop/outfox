@@ -67,7 +67,7 @@ class ChannelController(NSObject, FMODChannelBase):
         # flag first word so we can notify on output start
         self.first_word = True
         # start speaking
-        self.tts.startSpeakingString_(str(utterance.text))
+        self.tts.startSpeakingString_(utterance.text.encode('utf-8'))
         return True
 
     def _getVoices(self):
