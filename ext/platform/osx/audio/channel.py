@@ -33,6 +33,13 @@ class ChannelController(NSObject, FMODChannelBase):
             self.first_word = False
         return self
 
+    def _onFMODNonBlockingCallback(self, snd, result):
+        # allocate a release pool to avoid leaking Python objects
+        pool = NSAutoreleasePool.alloc().init()
+        rv = FMODChannelBase._onFMODNonBlockingCallback(self, snd, result)
+        del pool
+        return rv
+
     def _initializeConfig(self):
         FMODChannelBase._initializeConfig(self)
         self.config['voice'] = NSSpeechSynthesizer.defaultVoice()
@@ -67,7 +74,7 @@ class ChannelController(NSObject, FMODChannelBase):
         # flag first word so we can notify on output start
         self.first_word = True
         # start speaking
-        self.tts.startSpeakingString_(utterance.text.encode('utf-8'))
+        self.tts.startSpeakingString_(utterance.text)
         return True
 
     def _getVoices(self):

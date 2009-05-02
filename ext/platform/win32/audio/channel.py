@@ -72,8 +72,8 @@ class ChannelController(FMODSpeechBase):
         # synthesize speech and events
         stream, events = self.tts.Speak(text)
         # return an empty utterance if we didn't synth any words
-        if len(events) == 0:
-            return Utterance(text)
+        #if len(events) == 0:
+        #    return Utterance(text)
 
         # get the waveform format information
         format = stream.Format.GetWaveFormatEx()
