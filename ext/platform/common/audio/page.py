@@ -99,4 +99,4 @@ class PageController(object):
             # also, mark the channel as needing processing on the next run loop
             # iteration so it doesn't stall indefinitely
             self._notify('error', description=str(e), channel=ch.id)
-            ChannelBase.processNext(ch)
+            ChannelBase.processNext(ch, '_processQueue')

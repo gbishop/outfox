@@ -33,10 +33,10 @@ class ChannelController(NSObject, FMODChannelBase):
             self.first_word = False
         return self
 
-    def _onFMODNonBlockingCallback(self, snd, result):
+    def _onFMODNonBlockingCallback(self, snd):
         # allocate a release pool to avoid leaking Python objects
         pool = NSAutoreleasePool.alloc().init()
-        rv = FMODChannelBase._onFMODNonBlockingCallback(self, snd, result)
+        rv = FMODChannelBase._onFMODNonBlockingCallback(self, snd)
         del pool
         return rv
 
@@ -108,7 +108,7 @@ class ChannelController(NSObject, FMODChannelBase):
         self.busy = False
         self.name = None
         # process the queue
-        self._processQueue('finished speaking')
+        self._processQueue()
 
     def speechSynthesizer_willSpeakWord_ofString_(self, tts, rng, text):
         if self.first_word:
