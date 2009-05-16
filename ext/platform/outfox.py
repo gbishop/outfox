@@ -134,8 +134,8 @@ class Outfox(object):
 def main():
     import sys
     pid = os.getpid()
-    if sys.platform == 'win32':
-        sys.stderr = sys.stdout = file('c:\\outfox.log', 'w')
+    #if sys.platform == 'win32':
+    #    sys.stderr = sys.stdout = file('c:\\outfox.log', 'w')
     print 'Launching Outfox:', pid
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception

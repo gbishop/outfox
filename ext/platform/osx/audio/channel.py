@@ -16,6 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import objc
+from common.audio.channel import ChannelBase
 from common.audio.fmodchannel import FMODChannelBase
 from Foundation import *
 from AppKit import *
@@ -57,11 +58,17 @@ class ChannelController(NSObject, FMODChannelBase):
             self.tts.setVolume_(self.config['volume'])
 
     def stop(self, cmd):
-        FMODChannelBase.stop(self, cmd)
-        if self.tts is not None:
+        if self.done_action == 'finished-say':
+            # only do most base class clearing and stop speaking; DO NOT RESET
+            # flags here because stop is async
+            ChannelBase.stop(self, cmd)
             self.tts.stopSpeaking()
+        else:
+            # let parent class do what it normally does for sounds
+            FMODChannelBase.stop(self, cmd)
     
     def _outputUtterance(self, utterance):
+        self._text = utterance.text
         if not self.tts:
             # build a new synthesizer
             self.tts = NSSpeechSynthesizer.alloc().initWithVoice_(None)
@@ -101,14 +108,15 @@ class ChannelController(NSObject, FMODChannelBase):
 
     def speechSynthesizer_didFinishSpeaking_(self, tts, success):
         if self.first_word:
-            self._notify('started-output')            
+            self._notify('started-output')
         self._notify(self.done_action)
-        # reset stateful data
-        self.first_word = False
-        self.busy = False
-        self.name = None
+        # reset stateful data in this callback, NOT when stop is issued
+        #self.first_word = False
+        #self.busy = False
+        #self.name = None
+        self._resetFlags()
         # process the queue
-        self._processQueue()
+        ChannelBase.processNext(self, '_processQueue')
 
     def speechSynthesizer_willSpeakWord_ofString_(self, tts, rng, text):
         if self.first_word:

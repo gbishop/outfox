@@ -181,7 +181,6 @@ class FMODChannelBase(ChannelBase):
         self.done_cached = False        
 
     def _onFMODComplete(self):
-        #print '_onFMODComplete', self.snd
         # notify about end of stream
         self._notify(self.done_action)
         
@@ -205,7 +204,6 @@ class FMODChannelBase(ChannelBase):
         return FMOD_OK
 
     def _onFMODNonBlockingCallback(self, snd):
-        #print '_onFMODNonBlockingCallback', snd
         # make sure this channel is still busy trying to load the sound and 
         # hasn't been stopped; if it has, free the sound and let the main loop
         # continue
@@ -284,7 +282,6 @@ class FMODChannelBase(ChannelBase):
         return snd
         
     def _execFMODAudio(self, snd):
-        #print '_execFMODAudio', snd
         # set a marker on the first sample so we know when output starts
         pt = c_void_p()
         rv = self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
@@ -355,7 +352,6 @@ class FMODChannelBase(ChannelBase):
             self.sound_cache = {}
 
     def stop(self, cmd):
-        #print 'stop'
         # allow base class to clear
         ChannelBase.stop(self, cmd)
         if self.fch:
@@ -369,7 +365,6 @@ class FMODChannelBase(ChannelBase):
                 pass
         else:
             self._onFMODComplete()
-        #print 'stop end'
     
     def say(self, cmd):
         # make sure the speech string isn't empty; adhere to protocol of noop
@@ -392,7 +387,6 @@ class FMODChannelBase(ChannelBase):
         self._notify('started-say')
 
     def play(self, cmd, local):
-        #print 'play'
         # check if url is already known to be invalid
         if cmd.get('invalid'):
             self._notify('error', description='Bad sound URL.', url=cmd['url'])
@@ -423,7 +417,6 @@ class FMODChannelBase(ChannelBase):
             ChannelBase.processNext(self, '_onFMODNonBlockingCallback', snd)
         # store the sound for later comparison
         self.snd = snd
-        #print 'play done'
 
     def getConfig(self, cmd):
         # add all voice names to config
