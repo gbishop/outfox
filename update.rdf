@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+  <RDF:Description about="urn:mozilla:extension:outfox@code.google.com">
+    <em:updates>
+      <RDF:Seq>
+        <!-- Add latest release info to the BOTTOM of the list here -->
+        <RDF:li resource="urn:mozilla:extension:outfox@code.google.com:0.3.3"/>
+      </RDF:Seq>
+    </em:updates>
+    <!-- Run McCoy after updating this file with the latest release info-->
+    <em:signature></em:signature>
+  </RDF:Description>
+
+  <RDF:Description about="urn:mozilla:extension:outfox@code.google.com:0.3.3">
+    <em:version>0.3.3</em:version>
+    <em:targetApplication>
+      <RDF:Description>
+        <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+        <em:minVersion>3.0</em:minVersion>
+        <em:maxVersion>3.0.*</em:maxVersion>
+        <!-- Download location -->
+        <em:updateLink>https://www.cs.unc.edu/Research/assist/outfox/xpi/outfox-0.3.3.xpi</em:updateLink>
+        <!-- Info about the update in valid XHTML format, served as application/xhtml+xml -->
+        <em:updateInfoURL>http://www.cs.unc.edu/Research/assist/outfox/notes/outfox-0.3.3.xhtml</em:updateInfoURL>
+        <!-- Generated using openssl sha1 <.xpi file> -->
+        <em:updateHash>sha1:9a9d372688bdb8c7fd20b4d6e33176e12e639f07</updateHash>
+      </RDF:Description>
+    </em:targetApplication>
+  </RDF:Description>
+</RDF:RDF>
