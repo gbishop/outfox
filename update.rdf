@@ -24,7 +24,7 @@
         <!-- Info about the update in valid XHTML format, served as application/xhtml+xml -->
         <em:updateInfoURL>http://www.cs.unc.edu/Research/assist/outfox/notes/outfox-0.3.3.xhtml</em:updateInfoURL>
         <!-- Generated using openssl sha1 <.xpi file> -->
-        <em:updateHash>sha1:9a9d372688bdb8c7fd20b4d6e33176e12e639f07</updateHash>
+        <em:updateHash>sha1:7a07e9ef3e8a780423b8e22237aeeb1f66a7a453</updateHash>
       </RDF:Description>
     </em:targetApplication>
   </RDF:Description>

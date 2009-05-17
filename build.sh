@@ -27,3 +27,6 @@ done
 # zip it up
 cd build
 zip -r ../outfox-$VERSION.xpi * -x@../exclude.lst
+# clean up build
+cd ..
+rm -rf build
