@@ -84,11 +84,11 @@ class ChannelController(FMODSpeechBase):
 
         # register the callback and do the synthesis
         self.tts.SetSynthCallback(synth_cb)
-        self.tts.Synth(text, flags=espeak.ENDPAUSE|espeak.CHARS_WCHAR)
+        self.tts.Synth(text)
 
-        #if len(meta) == 0:
-        #    # return an empty utterance if we didn't synth any words
-        #    return Utterance(text)
+        if len(meta) == 0:
+            # return an empty utterance if we didn't synth any words
+            return Utterance(text)
 
         # populate an utterance object
         samples = ''.join(chunks)

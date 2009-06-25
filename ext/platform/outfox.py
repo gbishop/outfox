@@ -29,7 +29,6 @@ class Outfox(object):
         self.port = port
         self.service = service
         self.module = None
-        self.server = None
 
     def run(self):
         # locate the proper module for this platform
@@ -62,7 +61,7 @@ class Outfox(object):
             # open a new socket to report the failure
             s = socket.socket()
             s.connect(('127.0.0.1', self.port))
-            s.sendall(json+DELIMITER)            
+            s.sendall(msg+DELIMITER)            
 
     def shutdown(self):
         self.module.shutdown(self.module)
@@ -134,8 +133,8 @@ class Outfox(object):
 def main():
     import sys
     pid = os.getpid()
-    #if sys.platform == 'win32':
-    #    sys.stderr = sys.stdout = file('c:\\outfox.log', 'w')
+    if sys.platform == 'win32':
+        sys.stdout = file('c:\\outfox.log', 'w')
     print 'Launching Outfox:', pid
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception

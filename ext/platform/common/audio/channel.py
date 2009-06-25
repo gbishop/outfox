@@ -50,16 +50,15 @@ class ChannelBase(object):
         self._initializeConfig()
         
     @classmethod
-    def processNext(cls, ch, mtd, *args, **kwargs):
-        cls.toProcess.append((ch, mtd, args, kwargs))
+    def processNext(cls, ch):
+        cls.toProcess.append(ch)
         
     @classmethod
     def processPending(cls):
-        [getattr(ch, mtd)(*args, **kwargs) 
-            for ch, mtd, args, kwargs in cls.toProcess]
+        [ch._processQueue('toProcess') for ch in cls.toProcess]
         cls.toProcess = []
 
-    def _processQueue(self):
+    def _processQueue(self, reason):
         while (not self.busy) and len(self.queue):
             # peek at the top command to see if it is deferred
             cmd = self.queue[0]
@@ -82,7 +81,8 @@ class ChannelBase(object):
             # remember to pop the command
             cmd = self.queue.pop(0)
             # handle the next command
-            self._handleCommand(cmd)   
+            self._handleCommand(cmd)
+            
 
     def _notify(self, action, **kwargs):
         msg = {}
@@ -134,7 +134,7 @@ class ChannelBase(object):
             # out again, but it's clean
             self.queue.append(cmd)
             # process the queue
-            self._processQueue()
+            self._processQueue('pushRequest')
             
     def _initializeConfig(self):
         '''Override to change the default channel configuration.'''
@@ -174,7 +174,7 @@ class ChannelBase(object):
         # check if this deferred is the one that stalled the pipe
         if reqid == self.stalled_id:
             # if so, pump the queue
-            self._processQueue()
+            self._processQueue('deferred')
         # if not, just continue
 
     def stop(self, cmd):
