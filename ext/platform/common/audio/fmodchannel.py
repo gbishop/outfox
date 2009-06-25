@@ -20,9 +20,6 @@ from utterance import Utterance
 from channel import ChannelBase
 
 FMOD_OK = 0
-FMOD_ERR_NOTREADY = 55
-FMOD_OPENSTATE_READY = 0
-FMOD_OPENSTATE_ERROR = 2
 FMOD_CHANNEL_FREE = -1
 FMOD_DEFAULT = 0x00000000
 FMOD_LOOP_OFF = 0x00000001
@@ -30,42 +27,10 @@ FMOD_LOOP_NORMAL = 0x00000002
 FMOD_2D = 0x00000008
 FMOD_HARDWARE = 0x00000020
 FMOD_SOFTWARE = 0x00000040
-FMOD_NONBLOCKING = 0x00010000
 FMOD_CHANNEL_CALLBACKTYPE_END = 0
 FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT = 2
 FMOD_UNICODE = 0x01000000
 FMOD_TIMEUNIT_PCM  = 0x00000002
-
-class FMOD_CREATESOUNDEXINFO(Structure):
-    _fields_ = [
-        ('cbsize', c_int),
-        ('length', c_uint),
-        ('fileoffset', c_uint),
-        ('numchannels', c_int),
-        ('defaultfrequency', c_int),
-        ('format', c_uint),
-        ('decodebuffersize', c_uint),
-        ('initialsubsound', c_int),
-        ('numsubsounds', c_int),
-        ('inclusionlist', POINTER(c_int)),
-        ('inclusionlistnum', c_int),
-        ('pcmreadcallback', c_void_p),
-        ('pcmsetposcallback', c_void_p),
-        ('nonblockcallback', CFUNCTYPE(c_void_p, c_void_p, c_int)),
-        ('dlsname', c_char_p),
-        ('encryptionkey', c_char_p),
-        ('maxpolyphony', c_int),
-        ('userdata', c_void_p),
-        ('suggestedsoundtype', c_uint),
-        ('useropen', c_void_p),
-        ('userclose', c_void_p),
-        ('userread', c_void_p),    
-        ('userseek', c_void_p),
-        ('speakermap', c_uint),
-        ('initialsoundgroup', c_void_p),
-        ('initialseekposition', c_uint),
-        ('initialseekpostype', c_uint)
-    ]
 
 class FMODChannelBase(ChannelBase):
     '''
@@ -89,9 +54,6 @@ class FMODChannelBase(ChannelBase):
         # create channel callback
         cb_factory = CFUNCTYPE(c_int, c_void_p, c_int, c_int, c_int)
         self.fchcb = cb_factory(self._onFMODChannelCallback)
-        # create non-block callback
-        #cb_factory = CFUNCTYPE(c_void_p, c_void_p, c_int)
-        #self.nbcb = cb_factory(self._onFMODNonBlockingCallback)
         # information about the current speech utterance
         self.utterance = None
         # whether we're playing speech or sound
@@ -171,14 +133,6 @@ class FMODChannelBase(ChannelBase):
         if index == 0:
             # notify on output start
             self._notify('started-output')
-            
-    def _resetFlags(self):
-        self.snd = None
-        self.utterance = None
-        self.busy = False
-        self.name = None
-        self.done_action = None
-        self.done_cached = False        
 
     def _onFMODComplete(self):
         # notify about end of stream
@@ -189,12 +143,16 @@ class FMODChannelBase(ChannelBase):
             snd = c_void_p()
             self.fmod.FMOD_Channel_GetCurrentSound(self.fch, byref(snd))
             self.fmod.FMOD_Sound_Release(snd)
-        self.fch = None
+            self.fch = None
 
         # reset stateful data
-        self._resetFlags()
+        self.utterance = None
+        self.busy = False
+        self.name = None
+        self.done_action = None
+        self.done_cached = False
         # mark this channel ready for processing
-        ChannelBase.processNext(self, '_processQueue')
+        ChannelBase.processNext(self)
 
     def _onFMODChannelCallback(self, channel, kind, cmd1, cmd2):
         if kind == FMOD_CHANNEL_CALLBACKTYPE_END:
@@ -202,33 +160,6 @@ class FMODChannelBase(ChannelBase):
         elif kind == FMOD_CHANNEL_CALLBACKTYPE_SYNCPOINT:
             self._onFMODSyncPoint(cmd1)
         return FMOD_OK
-
-    def _onFMODNonBlockingCallback(self, snd):
-        # make sure this channel is still busy trying to load the sound and 
-        # hasn't been stopped; if it has, free the sound and let the main loop
-        # continue
-        if self.snd is not snd:
-            self.fmod.FMOD_Sound_Release(snd)
-            return
-
-        # make sure the async sound is ready for further use before performing
-        # any actions on it; if it isn't 
-        state = c_int()
-        rv = self.fmod.FMOD_Sound_GetOpenState(snd, byref(state), None, None)
-        if state.value == FMOD_OPENSTATE_ERROR:
-            # sound error; stop trying to handle this sound
-            self._notify('error', description='Cannot load sound data.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return
-        elif state.value != FMOD_OPENSTATE_READY:
-            # not ready for sound to start yet; try again later with the same
-            # parameters
-            ChannelBase.processNext(self, '_onFMODNonBlockingCallback', snd)
-            return
-
-        self._execFMODAudio(snd)
         
     def _buildFMODAudio(self, cmd, local):
         # default to not caching sound in memory
@@ -256,11 +187,7 @@ class FMODChannelBase(ChannelBase):
         # always allow for looping
         flags = FMOD_SOFTWARE|FMOD_2D|FMOD_LOOP_NORMAL
 
-        # open blocking if opening from local cache, else open nonblocking
-        if not self.done_cached:
-            flags |= FMOD_NONBLOCKING
-
-        if local:
+        if local: 
             # create a sound object, decode entirely in memory for playback
             snd = c_void_p()
             if self.fmod.FMOD_System_CreateSound(self.fsys, uri, flags, 
@@ -268,7 +195,7 @@ class FMODChannelBase(ChannelBase):
                 self._notify('error', description='Bad sound URL/filename.')
                 return None
         else:
-            # create a stream object, chunk decoding and playback
+            # create a stream object, stream decoding and playback
             snd = c_void_p()
             if self.fmod.FMOD_System_CreateStream(self.fsys, uri, flags, 
                 None, byref(snd)):
@@ -276,69 +203,10 @@ class FMODChannelBase(ChannelBase):
                 return None
         
         if self.done_cached:
-            # cache sound in memory if it's small
+            # cache sound in memory
             self.sound_cache[uri] = snd
-
+            
         return snd
-        
-    def _execFMODAudio(self, snd):
-        # set a marker on the first sample so we know when output starts
-        pt = c_void_p()
-        rv = self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
-            byref(pt))
-        if rv:
-            self._notify('error', description='Cannot set sound start marker.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return rv
-        
-        # play the sound object, starting paused
-        ch = c_void_p()
-        rv = self.fmod.FMOD_System_PlaySound(self.fsys, FMOD_CHANNEL_FREE, snd,
-            True, byref(ch))
-        if rv:
-            self._notify('error', description='Bad sound format.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return rv
-
-        # set channel volume and callback
-        rv = self.fmod.FMOD_Channel_SetCallback(ch, self.fchcb)
-        if rv:
-            self._notify('error', description='Cannot set sound callback.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return rv
-        rv = self.fmod.FMOD_Channel_SetVolume(ch, c_float(self.config['volume']))
-        if rv:
-            self._notify('error', description='Cannot set sound volume.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return rv
-        count = -1 if self.config['loop'] else 0
-        rv = self.fmod.FMOD_Channel_SetLoopCount(ch, count)
-        if rv:
-            self._notify('error', description='Cannot set looping.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return rv
-
-        # start the sound playing
-        rv = self.fmod.FMOD_Channel_SetPaused(ch, False)
-        if rv:
-            self._notify('error', description='Cannot start sound.')
-            self.fmod.FMOD_Sound_Release(snd)
-            self._resetFlags()
-            ChannelBase.processNext(self, '_processQueue')
-            return rv
-
-        # store a reference to the playing channel
-        self.fch = ch
 
     def reset(self, cmd):
         ChannelBase.reset(self, cmd)
@@ -358,13 +226,11 @@ class FMODChannelBase(ChannelBase):
             # clean up the playing FMOD channel and sound
             snd = c_void_p()
             try:
-                # immediately invokes the calback on *nux, but no where else?
-                # yuck!
+                # invoking stop immediately calls the callback and doesn't
+                # wait for FMOD_System_Update()
                 self.fmod.FMOD_Channel_Stop(self.fch)
             except Exception, e:
                 pass
-        else:
-            self._onFMODComplete()
     
     def say(self, cmd):
         # make sure the speech string isn't empty; adhere to protocol of noop
@@ -401,22 +267,48 @@ class FMODChannelBase(ChannelBase):
             snd = self._buildFMODAudio(cmd, local)
             # leave if sound was not created; method already notified client
             if snd is None: return
+            # set a marker on the first sample so we know when output starts
+            pt = c_void_p()
+            self.fmod.FMOD_Sound_AddSyncPoint(snd, 0, FMOD_TIMEUNIT_PCM, '', 
+                byref(pt))
 
+        # play the sound object, starting paused
+        ch = c_void_p()
+        if self.fmod.FMOD_System_PlaySound(self.fsys, FMOD_CHANNEL_FREE, snd, True, 
+            byref(ch)):
+            self._notify('error', description='Bad sound format.')
+            self.fmod.FMOD_Sound_Release(snd)
+            return
+
+        # set channel volume and callback
+        if self.fmod.FMOD_Channel_SetCallback(ch, self.fchcb):
+            self._notify('error', description='Cannot set sound callback.')
+            self.fmod.FMOD_Sound_Release(snd)
+            return
+        if self.fmod.FMOD_Channel_SetVolume(ch, c_float(self.config['volume'])):
+            self._notify('error', description='Cannot set sound volume.')
+            self.fmod.FMOD_Sound_Release(snd)
+            return
+        count = -1 if self.config['loop'] else 0
+        if self.fmod.FMOD_Channel_SetLoopCount(ch, count):
+            self._notify('error', description='Cannot set looping.')
+            self.fmod.FMOD_Sound_Release(snd)
+            return
+
+        # start the sound playing
+        if self.fmod.FMOD_Channel_SetPaused(ch, False):
+            self._notify('error', description='Cannot start sound.')
+            self.fmod.FMOD_Sound_Release(snd)
+            return
+
+        # store a reference to the playing channel
+        self.fch = ch
         # set flags
         self.name = cmd.get('name')
         self.busy = True
         self.done_action = 'finished-play'
         # notify on start
         self._notify('started-play')
-        
-        if self.done_cached:
-            # if caching, opened blocking so start immediately
-            self._execFMODAudio(snd)
-        else:
-            # if non-blocking, handle on next main loop iteration
-            ChannelBase.processNext(self, '_onFMODNonBlockingCallback', snd)
-        # store the sound for later comparison
-        self.snd = snd
 
     def getConfig(self, cmd):
         # add all voice names to config

@@ -30,7 +30,7 @@ typelibs = [('{C866CA3A-32F7-11D2-9602-00C04F8EE628}', 0, 5, 0)]
 packages = ['encodings', 'win32', 'common', 'simplejson']
 
 setup(console=["outfox.py"],
-      version='0.3.5',
+      version='0.3.1',
       options={"py2exe": {"compressed": 1,
                           'optimize': 2,
                           'excludes' : excludes,

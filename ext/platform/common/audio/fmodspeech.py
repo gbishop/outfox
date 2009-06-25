@@ -16,7 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 from ctypes import *
-from fmodchannel import FMODChannelBase, FMOD_CREATESOUNDEXINFO
+from fmodchannel import FMODChannelBase
 
 FMOD_CHANNEL_FREE = -1
 FMOD_SOUND_FORMAT_PCM8 = 1
@@ -24,6 +24,37 @@ FMOD_SOUND_FORMAT_PCM16 = 2
 FMOD_OPENMEMORY = 0x00000800
 FMOD_OPENRAW = 0x00001000
 FMOD_TIMEUNIT_PCM  = 0x00000002
+
+class FMOD_CREATESOUNDEXINFO(Structure):
+    _fields_ = [
+        ('cbsize', c_int),
+        ('length', c_uint),
+        ('fileoffset', c_uint),
+        ('numchannels', c_int),
+        ('defaultfrequency', c_int),
+        ('format', c_uint),
+        ('decodebuffersize', c_uint),
+        ('initialsubsound', c_int),
+        ('numsubsounds', c_int),
+        ('inclusionlist', POINTER(c_int)),
+        ('inclusionlistnum', c_int),
+        ('pcmreadcallback', c_void_p),
+        ('pcmsetposcallback', c_void_p),
+        ('nonblockcallback', c_void_p),
+        ('dlsname', c_char_p),
+        ('encryptionkey', c_char_p),
+        ('maxpolyphony', c_int),
+        ('userdata', c_void_p),
+        ('suggestedsoundtype', c_uint),
+        ('useropen', c_void_p),
+        ('userclose', c_void_p),
+        ('userread', c_void_p),    
+        ('userseek', c_void_p),
+        ('speakermap', c_uint),
+        ('initialsoundgroup', c_void_p),
+        ('initialseekposition', c_uint),
+        ('initialseekpostype', c_uint)
+    ]
 
 class FMODSpeechBase(FMODChannelBase):
     def _outputUtterance(self, utterance):
