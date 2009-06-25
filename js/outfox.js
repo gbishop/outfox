@@ -20,29 +20,20 @@ if(!outfox) {
         * will be used.
         *
         * @param box DOM node which outfox will use for in/out messages
-        * @param encoder: JSON encoder callable. Ignored in FF 3.5 which always
-        *   uses the native JSON.stringify function.
-        * @param decoder: JSON decoder callable. Ignored in FF 3.5 which always
-        *   uses the native JSON.parse function.
+        * @param encoder JSON encoder callable
+        * @param decoder JSON decoder callable
         */
         init: function(box, encoder, decoder) {
-            // json encode/decode
-            if(JSON != undefined) {
-                this.encoder = JSON.stringify;
-                this.decoder = JSON.parse;
-            } else if(encoder != undefined && decoder != undefined) {
-                this.encoder = encoder;
-                this.decoder = decoder;
-            } else {
-                throw new Error('JSON encoder/decoder required');
-            }
-            
             // observers for callbacks by service
             this.observers = {};
             // deferreds for service start by service name
             this.services = {};
             // deferred for initialization
             this.def_init = new outfox.Deferred();
+
+            // json encode/decode
+            this.encoder = encoder;
+            this.decoder = decoder;
 
             if(typeof box == 'string') {
                 // look up DOM node
@@ -207,8 +198,8 @@ if(!outfox) {
         },
 
         /**
-         * Called when a service started successfully. Evaluates the script
-         * extension.
+         * Called when a service started successfully. Inserts a script node to
+         * execute its JS extension.
          *
          * @param cmd Service started command
          */
@@ -217,14 +208,18 @@ if(!outfox) {
             var state = this.services[cmd.service];
             if(state != undefined) {
                 // add code extension to page
-                var script = 'outfox.'+cmd.service+' = {'+cmd.extension+'}; outfox.'+cmd.service+'.init()';
+                var script = document.createElement('script');
+                var head = document.getElementsByTagName('head')[0];
+                head.appendChild(script);
+                // add the extension to the outfox object under the service name
+                // invoke its init method when the script tag runs it
+                // the extension must call _onServiceExtensionReady or _onServiceFailed
+                // on this object after initialization
+                script.textContent = 'outfox.'+cmd.service+' = {'+cmd.extension+'}; outfox.'+cmd.service+'.init()';
+                // hang onto the script node for removal
+                state.script = script;
                 // hang onto the command for later callback
                 state.cmd = cmd;
-                // add the extension to the outfox object under the service name
-                // invoke its init method when evaluated
-                // the extension must call _onServiceExtensionReady or 
-                // _onServiceFailed on this object after initialization
-                eval(script);
             }
         },
 
@@ -252,7 +247,10 @@ if(!outfox) {
         _onServiceFailed: function(cmd) {
             var state = this.services[cmd.service];
             if(state != undefined) {
-                if(state.cmd.extension) {
+                if(state.script) {
+                    // remove the script node
+                    var head = document.getElementsByTagName('head');
+                    head[0].removeChild(state.script);
                     // remove code extension
                     delete this[cmd.service];
                 }
@@ -272,7 +270,10 @@ if(!outfox) {
         _onServiceStopped: function(cmd) {
             var state = this.services[cmd.service];
             if(state != undefined) {
-                if(state.cmd.extension) {
+                if(state.script) {
+                    // remove the script node
+                    var head = document.getElementsByTagName('head');
+                    head[0].removeChild(state.script);
                     // remove code extension
                     delete this[cmd.service];
                 }
@@ -318,73 +319,97 @@ if(!outfox) {
 
         disconnect: function(token) {
             token.target.removeEventListener(token.event, token.cb, token.capture);
+        },
+
+        declare: function(name, base, sig) {
+            var segs = name.split('.');
+            var obj = window;
+            for(var i=0; i < segs.length-1; i++) {
+                var seg = segs[i];
+                if(typeof obj[seg] == 'undefined') {
+                    obj[seg] = {};
+                }
+                obj = obj[seg];
+            }
+            var f = function() {
+                this.constructor.apply(this, arguments);
+            };
+            if(base != null) {
+                f.prototype = base;
+            }
+            for(var key in sig) {
+                f.prototype[key] = sig[key];
+            }
+            obj[segs[segs.length-1]] = f;
         }
     };
 
-    outfox.Deferred = function() {
-        this.callbacks = [];
-        this.errbacks = [];
-        this.error = null;
-        this.value = null;        
-    }
-    
-    outfox.Deferred.prototype.addCallback = function(ob) {
-        if(this.value != null) {
-            try {
-                ob(this.value);
-            } catch(e) {
-                console.warn(e);
+    outfox.utils.declare('outfox.Deferred', null, {
+        constructor: function() {
+            this.callbacks = [];
+            this.errbacks = [];
+            this.error = null;
+            this.value = null;
+        },
+
+        addCallback: function(ob) {
+            if(this.value != null) {
+                try {
+                    ob(this.value);
+                } catch(e) {
+                    console.warn(e);
+                }
+            } else {
+                this.callbacks.push(ob);
             }
-        } else {
-            this.callbacks.push(ob);
-        }
-        return this;
-    }
+            return this;
+        },
 
-    outfox.Deferred.prototype.addErrback = function(ob) {
-        if(this.error != null) {
-            try {
-                ob(this.error);
-            } catch(e) {
-                console.warn(e);
+        addErrback: function(ob) {
+            if(this.error != null) {
+                try {
+                    ob(this.error);
+                } catch(e) {
+                    console.warn(e);
+                }
+            } else {
+                this.errbacks.push(ob);
             }
-        } else {
-            this.errbacks.push(ob);
-        }
-        return this;
-    }
+            return this;
+        },
 
-    outfox.Deferred.prototype.callback = function(value) {
-        if(this.value || this.error) {
-            throw new Error('already called');
-        }
-        this.value = value;
-        for(var i=0; i < this.callbacks.length; i++) {
-            try {
-                value = this.callbacks[i](value);
-            } catch(e) {
-                this._doErrbacks(e.toString(), i+1);
+        callback: function(value) {
+            if(this.value || this.error) {
+                throw new Error('already called');
             }
-        }
-    }
-
-    outfox.Deferred.prototype._doErrbacks = function(value, i) {
-        this.error = value;
-        this.value = null;
-
-        for(; i < this.errbacks.length; i++) {
-            try {
-                value = this.errbacks[i](value);
-            } catch(e) {
-                value = e.toString();
+            this.value = value;
+            for(var i=0; i < this.callbacks.length; i++) {
+                try {
+                    value = this.callbacks[i](value);
+                } catch(e) {
+                    this._doErrbacks(e.toString(), i+1);
+                }
             }
-        }
-    }
+        },
 
-    outfox.Deferred.prototype.errback = function(value) {
-        if(this.value || this.error) {
-            throw new Error('already called');
+        _doErrbacks: function(value, i) {
+            this.error = value;
+            this.value = null;
+
+            for(; i < this.errbacks.length; i++) {
+                try {
+                    value = this.errbacks[i](value);
+                } catch(e) {
+                    value = e.toString();
+                }
+            }
+        },
+
+        errback: function(value) {
+            if(this.value || this.error) {
+                throw new Error('already called');
+            }
+            this._doErrbacks(value, 0);
         }
-        this._doErrbacks(value, 0);
-    }
+    });
 }
