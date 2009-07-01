@@ -179,7 +179,12 @@ if(!outfox) {
             this.in_dom.removeChild(node);
             // handle init response from extension
             if(cmd.action == 'initialized-outfox') {
-                this.def_init.callback(cmd.value);
+                this.def_init.callback(cmd);
+                this.def_init = null;
+                return;
+            // handle failed init response from extension
+            } else if(cmd.action == 'failed-outfox') {
+                this.def_init.errback(cmd);
                 this.def_init = null;
                 return;
             // handle service start, stop, fail

@@ -40,32 +40,51 @@ utils.declare('outfox.PageController', null, {
         // create cache session
         this.cache = new outfox.CacheController();
 
-        // locate or add incoming and outgoing queues
+        // locate incoming and outgoing queues
         this.in_queue = this.doc.getElementById(ROOT_ID + '-in');
         this.out_queue = this.doc.getElementById(ROOT_ID + '-out');
 
         if(this.in_queue == null || this.out_queue == null) {
-            // not a valid outfox node
+            // not a valid outfox node, not much we can do to report the error
             throw new Error('invalid outfox node');
         }
 
-        // watch for additions to the outgoing queues
-        this.tokens = [];
-        this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted', 
-            this, '_onRequest'));
+        logit('PageController: created');
+    },
+    
+    /**
+     * Initialize the page controller instance, reporting either success or
+     * failure.
+     *
+     * @param error Error object
+     */
+    initialize: function(error) {
+        if(error) {
+            // immediately report failure
+            var ver = {action: 'failed-outfox', description: error.message};
+            var json = utils.toJson(ver);
+            this._respond(json);
+            // don't do anything else, let the page stew indefinitely
+            logit('PageController: failed');
+        } else {
+            // watch for additions to the outgoing queue
+            this.tokens = [];
+            this.tokens.push(utils.connect(this.out_queue, 'DOMNodeInserted', 
+                this, '_onRequest'));
             
-        // immediately report version number
-        var ver = {action: 'initialized-outfox', value: VERSION};
-        var json = utils.toJson(ver);
-        this._respond(json);
+            // immediately report version number
+            var ver = {action: 'initialized-outfox', version: VERSION};
+            var json = utils.toJson(ver);
+            this._respond(json);
 
-        // run through everything waiting in the outgoing queue and process it 
-        while(this.out_queue.firstChild) {
-            // handler removes nodes for us
-            this._onRequest({'target' : this.out_queue.firstChild});
+            // run through everything waiting in the outgoing queue and process
+            // it
+            while(this.out_queue.firstChild) {
+                // handler removes nodes for us
+                this._onRequest({'target' : this.out_queue.firstChild});
+            }
+            logit('PageController: initialized');
         }
-
-        logit('PageController: initialized');
     },
 
     /**

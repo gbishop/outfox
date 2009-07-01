@@ -15,7 +15,7 @@
 * */
 const GUID = 'outfox@code.google.com';
 const ROOT_ID = 'outfox@code.google.com';
-const VERSION = '0.3.5';
+const VERSION = '0.4.0';
 
 /**
 * Manages the creation of page controllers monitoring Outfox in/out queues and
@@ -33,6 +33,8 @@ utils.declare('outfox.Factory', null, {
         this.services = {};
         // dictionary mapping page ids to PageController instances
         this.controllers = {};
+        // per origin (scheme, host, port) white/black list for outfox access
+        this.access = new outfox.AccessController();
         // watch for Firefox window load event
         this.tokens.push(utils.connect(window, 'load', this, 'initialize'));
         logit('Factory: created');
@@ -44,6 +46,10 @@ utils.declare('outfox.Factory', null, {
     * @param event Window load event
     */
     initialize: function(event) {
+        // localized strings
+        this.str_bundle = document.getElementById('outfoxMessageBundle');
+        // initialize access api
+        this.access.initialize();
         // watch for Firefox window unload event
         this.tokens.push(utils.connect(window, 'unload', this, 'shutdown'));
         // start listening for page and tab related events
@@ -78,7 +84,27 @@ utils.declare('outfox.Factory', null, {
             var sv = this.services[key];
             sv.shutdown();
         }
+        // shutdown access api
+        this.access.shutdown();
         logit("Factory: shutdown");
+    },
+    
+    _promptForAccess: function(key) {
+        // get prompt service
+        var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                      .getService(Components.interfaces.nsIPromptService);
+        // configure prompt options
+        var check = {value: false};
+        var flags = prompts.BUTTON_TITLE_YES * prompts.BUTTON_POS_0 +
+                    prompts.BUTTON_TITLE_NO * prompts.BUTTON_POS_1;
+        // build prompt strings
+        var prompt_text = this.str_bundle.getFormattedString('useMessageOrigin', 
+            [key]) + this.str_bundle.getString('useMessagePrompt');
+        var remember_text = this.str_bundle.getString('useMessageRemember');
+        // show the modal prompt
+        var button = prompts.confirmEx(window, 'Outfox', prompt_text, flags, 
+            '', '', '', remember_text, check);
+        return {can_access : !button, save_result : check.value};
     },
 
     /**
@@ -89,8 +115,27 @@ utils.declare('outfox.Factory', null, {
     * @param doc DOM document instance managed by the page
     */
     _createController: function(page_id, doc) {
+        var key = this.access.getKeyFromURI(doc.baseURIObject);
+        // check for page access
+        var can_access = this.access.canURIAccess(key);
+        if(can_access == null) {
+            // prompt user for access
+            var rv = this._promptForAccess(key);
+            can_access = rv.can_access;
+            if(rv.save_result) {
+                // record the result
+                if(can_access) {
+                    this.access.allowURIAccess(key);
+                } else {
+                    this.access.denyURIAccess(key);
+                }
+            }
+        }
         // create a controller object
+        var error = (can_access) ? null : new Error('access to outfox denied');
         var pc = new outfox.PageController(page_id, doc, this);
+        // initialize it so it can report success or a permission error
+        pc.initialize(error);
         // store controller in conjunction with the document
         this.controllers[page_id] = pc;
         logit('Factory: created page controller');

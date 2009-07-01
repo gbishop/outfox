@@ -14,7 +14,6 @@
 * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 * */
 function logit() {
-    return;
     var consoleService = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
     var text = '';
     for(var i=0; i < arguments.length; i++) {

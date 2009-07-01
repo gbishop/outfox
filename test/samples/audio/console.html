@@ -10,19 +10,24 @@
       var urls = ['./sounds/Horse.mp3', './sounds/Error.mp3' , './sounds/FileEnd.mp3', './sounds/FileRequest.mp3', 
                   './sounds/FileStart.mp3', './sounds/New.mp3', './sounds/Off.mp3'];
       function onLoad(event) {
-          outfox.init("outfox", JSON.stringify, JSON.parse).addCallback(function(version) {
-              console.debug(value);
-          });
-          var def = outfox.startService("audio");
+          var def = outfox.init("outfox", JSON.stringify, JSON.parse);
           def.addCallback(function(cmd) {
+              console.debug('outfox initialized:', cmd.version);
+          });
+          def.addErrback(function(cmd) {
+              console.debug('outfox failed:', cmd.description);
+          });
+          
+          def = outfox.startService("audio");
+          def.addCallback(function(cmd) {
+            console.debug('outfox audio initialized');
               outfox.audio.addObserver(function(of, response) {
                 console.debug(response);
               });
-              outfox.audio.say('Outfox is ready.');
+              outfox.audio.say('Outfox audio is ready.');
           });
           def.addErrback(function(cmd) {
-              var box = document.getElementById('status');
-              box.innerHTML = cmd.description;
+              console.debug('outfox audio failed:', cmd.description);
           });
       }
     </script>

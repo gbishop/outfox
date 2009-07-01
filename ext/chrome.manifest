@@ -1,2 +1,3 @@
 content	outfox		content/
+locale   outfox      en-US    locale/en-US/
 overlay	chrome://browser/content/browser.xul	chrome://outfox/content/firefoxOverlay.xul
