@@ -37,7 +37,7 @@ utils.declare('outfox.AccessController', null, {
     },
     
     /**
-     * Initialize the instance.
+     * Initializes the instance.
      */
     initialize: function() {
         // currently a no-op
@@ -60,6 +60,23 @@ utils.declare('outfox.AccessController', null, {
             return uri.scheme+'://'+uri.host+':'+uri.port;
         }
     },
+
+    /**
+     * Gets all of the rows in the access table.
+     *
+     * @return Array of objects with key and allowed properties
+     */
+    getAllPermissions: function() {
+        var statement = this.conn.createStatement('SELECT * FROM access;');
+        var rows = [];
+        while(statement.executeStep()) {
+            var key = statement.getString(0);
+            var allowed = statement.getInt32(1);
+            rows.push({key : key, allowed: allowed});
+        }
+        statement.finalize();
+        return rows;
+    },
     
     /**
      * Gets if a URI has access to outfox services or not.
@@ -72,9 +89,10 @@ utils.declare('outfox.AccessController', null, {
         statement.bindUTF8StringParameter(0, key);
         if(statement.executeStep()) {
             var val = statement.getInt32(1);
+            statement.finalize();
             return val;
         }
-        logit('done execute step');
+        //logit('done execute step');
         return null;
     },
     
@@ -87,6 +105,7 @@ utils.declare('outfox.AccessController', null, {
         var statement = this.conn.createStatement('INSERT OR REPLACE INTO access (uriKey,allowed) values (:uriKeyValue, 1)');
         statement.bindUTF8StringParameter(0, key);
         statement.execute();
+        statement.finalize();
     },
 
     /**
@@ -98,6 +117,7 @@ utils.declare('outfox.AccessController', null, {
         var statement = this.conn.createStatement('INSERT OR REPLACE INTO access (uriKey,allowed) values (:uriKeyValue, 0)');
         statement.bindUTF8StringParameter(0, key);
         statement.execute();
+        statement.finalize();
     },
    
     /**
@@ -109,5 +129,6 @@ utils.declare('outfox.AccessController', null, {
         var statement = this.conn.createStatement('DELETE FROM access WHERE uriKey = :uriKeyValue');
         statement.bindUTF8StringParameter(0, key);
         statement.execute();
+        statement.finalize();
     }
 });

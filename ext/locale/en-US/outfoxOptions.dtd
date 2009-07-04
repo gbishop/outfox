@@ -1,0 +1,6 @@
+<!ENTITY dialog.title "Outfox Options">
+<!ENTITY perms.label "Site Permissions">
+<!ENTITY perms.description "This list shows sites that have attempted to access Outfox. Use the radio buttons to permanently allow or deny these sites access. Select a site and click <em>Remove</em> to have Outfox prompt you for permission each time you visit the site.">
+<!ENTITY perms.allowLabel "Allow">
+<!ENTITY perms.denyLabel "Deny">
+<!ENTITY remove.label "Remove">

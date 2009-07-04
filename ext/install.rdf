@@ -13,6 +13,7 @@
                    em:creator="Carolina Computer Assistive Technology"
                    em:description="Extensible I/O for Firefox JavaScript"
                    em:homepageURL="http://code.google.com/p/outfox"
+                   em:optionsURL="chrome://outfox/content/options.xul"
                    em:iconURL="chrome://outfox/content/icon.png"
                    em:updateURL="http://cs.unc.edu/Research/assist/outfox/update.rdf"
                    em:updateKey="MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQD0VOFxq7lCJgPp+dA8QDimedGItlHd2d7TXD904+22uAdeA4tw0SoefuHodRxfzxGrQMb26euJ6GY61EM0LTG4Zxl6Abwpqh65TTl0lTSWzO9/fz5JgH/Pyzcwp5Powhd+g2CJLAG+ygJENVeeq9IQCH/Vpiy/HNli0+Wf1O9cIQIDAQAB">
