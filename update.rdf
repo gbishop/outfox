@@ -62,7 +62,7 @@
                 <em:maxVersion>3.5.*</em:maxVersion>
                 <em:updateLink>https://www.cs.unc.edu/Research/assist/outfox/xpi/outfox-0.4.0.xpi</em:updateLink>
                 <em:updateInfoURL>http://www.cs.unc.edu/Research/assist/outfox/notes/outfox-0.4.0.xhtml</em:updateInfoURL>
-                <em:updateHash>sha1:</em:updateHash>
+                <em:updateHash>sha1:890f9d74eb63b68c4304380331af95986fd7cb9f</em:updateHash>
               </RDF:Description>
             </em:targetApplication>
           </RDF:Description>
