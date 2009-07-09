@@ -16,7 +16,7 @@
 */
 const GUID = 'outfox@code.google.com';
 const ROOT_ID = 'outfox@code.google.com';
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 
 /**
 * Manages the creation of page controllers monitoring Outfox in/out queues and

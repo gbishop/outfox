@@ -384,5 +384,5 @@ _copyDefaults: function() {
         cp[key] = this.defaults[key];
     }
     return cp;
-},
+}
 '''

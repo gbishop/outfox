@@ -8,12 +8,12 @@
       <arg value="audio" />
     </executable>
   </service>
-  <service id="joystick">
+  <service id="echo">
     <executable path="outfox.py">
-      <arg value="joystick" />
+      <arg value="echo" />
     </executable>
     <executable path="dist/outfox.exe">
-      <arg value="joystick" />
+      <arg value="echo" />
     </executable>
   </service>
 </services>

@@ -67,6 +67,22 @@
             </em:targetApplication>
           </RDF:Description>
         </RDF:li>
+
+        <RDF:li>
+          <RDF:Description>
+            <em:version>0.4.1</em:version>
+            <em:targetApplication>
+              <RDF:Description>
+                <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+                <em:minVersion>3.0</em:minVersion>
+                <em:maxVersion>3.5.*</em:maxVersion>
+                <em:updateLink>https://www.cs.unc.edu/Research/assist/outfox/xpi/outfox-0.4.1.xpi</em:updateLink>
+                <em:updateInfoURL>http://www.cs.unc.edu/Research/assist/outfox/notes/outfox-0.4.1.xhtml</em:updateInfoURL>
+                <em:updateHash>sha1:890f9d74eb63b68c4304380331af95986fd7cb9f</em:updateHash>
+              </RDF:Description>
+            </em:targetApplication>
+          </RDF:Description>
+        </RDF:li>
       </RDF:Seq>
     </em:updates>
   </RDF:Description>

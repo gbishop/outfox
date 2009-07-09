@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 '''
-Build script for Windows.
+Echo service example for *nix.
 
 Copyright (c) 2008, 2009 Carolina Computer Assistive Technology
 
@@ -16,26 +15,23 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-from distutils.core import setup
-import py2exe
-import shutil
+from common.server import JSONServer
+from common.echo.page import PageController
+import asyncore
+import os
 
-dll_excludes = []
-excludes = [
-    'bz2',
-    '_ssl',
-    '_hashlib'
-]
-typelibs = [('{C866CA3A-32F7-11D2-9602-00C04F8EE628}', 0, 5, 0)]
-packages = ['encodings', 'win32', 'common', 'simplejson']
+RUNNING = True
 
-setup(console=["outfox.py"],
-      version='0.4.1',
-      options={"py2exe": {"compressed": 1,
-                          'optimize': 2,
-                          'excludes' : excludes,
-                          'dll_excludes': dll_excludes,
-                          'typelibs': typelibs,
-                          'packages': packages
-                          }}
-)
+def buildServer(module, port):
+    return JSONServer(port)
+
+def buildPage(module, page_id):
+    return PageController(page_id, module)
+
+def shutdown(module):
+    module.RUNNING = False
+
+def run(module):
+    while module.RUNNING:
+        # poll asyncore
+        asyncore.poll(0.05)
