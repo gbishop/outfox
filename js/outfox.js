@@ -257,7 +257,7 @@ if(!outfox) {
         _onServiceFailed: function(cmd) {
             var state = this.services[cmd.service];
             if(state != undefined) {
-                if(state.cmd.extension) {
+                if(state.cmd && state.cmd.extension) {
                     // remove code extension
                     delete this[cmd.service];
                 }
