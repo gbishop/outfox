@@ -87,12 +87,11 @@ class ChannelBase(object):
     def _notify(self, action, **kwargs):
         msg = {}
         msg['channel'] = self.id
-        msg['action'] = action
         if self.name is not None:
             msg['name'] = self.name
         msg.update(kwargs)
         if self.observer is not None:
-            self.observer.pushResponse(msg)
+            self.observer.pushResponse(action, **msg)
 
     def _handleCommand(self, cmd):
         action = cmd.get('action')

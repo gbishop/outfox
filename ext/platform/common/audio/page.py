@@ -15,71 +15,49 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
+from ..page import PageController
 from channel import ChannelBase
 import os
 import jsext
 
-class PageController(object):
+class PageController(PageController):
     def __init__(self, id, module):
-        self.id = id
-        self.module = module
+        super(PageController, self).__init__(id, module)
         self.channels = {}
-        self.observer = None
-        self.started = False
 
-    def setObserver(self, ob):
-        self.observer = ob
+    def onStart(self, cmd):
+        '''
+        Handles an audio service start request.
         
-    def _notify(self, action, **kwargs):
-        cmd = {}
-        cmd['action'] = action
-        cmd.update(kwargs)
-        self.observer.pushResponse(self.id, cmd)
+        @param cmd Dictionary of arguments for service start in the outfox
+          protocol
+        @return JS methods to add to the outfox.<service name> object if the 
+          service is ready for use, or None if the the subclass will send the
+          service started response at a later point
+        '''
+        return jsext.CLASS
 
-    def pushRequest(self, cmd):
-        if cmd['action'] == 'start-service':
-            # start service
-            self._onStart(cmd)
-        elif cmd['action'] == 'stop-service':
-            # stop service
-            self._onStop(cmd)
-        elif self.started:
-            # all other requests for channel after started
-            self._onChannelCmd(cmd)
-
-    def pushResponse(self, cmd):
-        # inform the observer of the response
-        self.observer.pushResponse(self.id, cmd)
-
-    def _onStart(self, cmd):
-        if self.started:
-            # make sure we haven't already started, if so, send an error
-            self._notify('failed-service', 
-                description='Service already started.')
-        else:
-            # send the service started message with the JS extension
-            self._notify('started-service', extension=jsext.CLASS)
-            self.started = True
+    def onStop(self,cmd):
+        '''
+        Handles an audio service stop request.
         
-    def _onStop(self,cmd):
-        if not self.started:
-            # make sure we have started, if not, send an error
-            self._notify('failed-service', description='Service not started.')
-        else:
-            # send all channels the stop message
-            for ch in self.channels.values():
-                try:
-                    ch.pushRequest(cmd)
-                except Exception, e:
-                    # ignore any errors during shutdown
-                    pass
-            # tell the requester that the service is stopped
-            self._notify('stopped-service')
-            # clean up the observer
-            self.observer = None
-            self.started = False
+        @param cmd Dictionary of arguments for service stop in the outfox
+          protocol
+        '''
+        # send all channels the stop message
+        for ch in self.channels.values():
+            try:
+                ch.pushRequest(cmd)
+            except Exception, e:
+                # ignore any errors during shutdown
+                pass
         
-    def _onChannelCmd(self, cmd):
+    def onRequest(self, cmd):
+        '''
+        Dispatches all other requests to channel controllers.
+        
+        @param cmd Dictionary of arbitrary command values
+        '''
         # find which channel we're attempting to use
         ch_id = cmd.get('channel', 0)
         try:
@@ -98,5 +76,5 @@ class PageController(object):
             # if the channel raises an exception, notify the client of an error
             # also, mark the channel as needing processing on the next run loop
             # iteration so it doesn't stall indefinitely
-            self._notify('error', description=str(e), channel=ch.id)
+            self.pushResponse('error', description=str(e), channel=ch.id)
             ChannelBase.processNext(ch, '_processQueue')
