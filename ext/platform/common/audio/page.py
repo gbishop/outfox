@@ -15,12 +15,12 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
-from ..page import PageController
+from ..page import BasePageController
 from channel import ChannelBase
 import os
 import jsext
 
-class PageController(PageController):
+class PageController(BasePageController):
     def __init__(self, id, module):
         super(PageController, self).__init__(id, module)
         self.channels = {}

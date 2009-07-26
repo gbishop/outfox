@@ -17,7 +17,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 import os
 
-class PageController(object):
+class BasePageController(object):
     def __init__(self, id, module):
         # id assigned to this page by the browser extension
         self.id = id

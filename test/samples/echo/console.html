@@ -19,9 +19,10 @@
           def = outfox.startService("echo");
           def.addCallback(function(cmd) {
             console.debug('outfox echo initialized');
-              outfox.echo.addObserver(function(response) {
-                console.debug('pong received!', response);
-              });
+            outfox.echo.addObserver(function(response) {
+              console.debug('pong received!', response);
+            });
+            outfox.echo.ping("first ping");
           });
           def.addErrback(function(cmd) {
               console.debug('outfox echo failed:', cmd.description);
@@ -31,11 +32,10 @@
   </head>
   <body onload="onLoad();">
     <h1>Outfox Echo for Firebug</h1>
-    <div id="status"></div>
     <div id="outfox"></div>
     <div class="menu"><a href="../index.html">Samples Index</a></div>
     <p>Use the Firebug console to control the Outfox echo service on this page (e.g., <code>outfox.echo.ping('some text');</code>). The method <code>console.debug</code> is set as the callback for responses from the service.</p>
     <p>See <a href="http://code.google.com/p/outfox">http://code.google.com/p/outfox/wiki/EchoServiceTutorial</a> for an explanation of how this echo service was built.</p>
-    <p class="copyright">Copyright (c) 2008, 2009 Carolina Computer Assistive Technology under the terms of the BSD license.</p>
+    <p class="copyright">Sample code copyright (c) 2008, 2009 Carolina Computer Assistive Technology under the terms of the BSD license.</p>
   </body>
 </html>
