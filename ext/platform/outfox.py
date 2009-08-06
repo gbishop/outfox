@@ -101,6 +101,8 @@ class Outfox(object):
         except Exception, e:
             # if the service did not handle the error, something really bad
             # happened so best that we notify that the entire service failed
+            import traceback
+            traceback.print_exc()
             self._notify('*', action='failed-service', description=str(e))
             return
 
@@ -134,8 +136,6 @@ class Outfox(object):
 def main():
     import sys
     pid = os.getpid()
-    #if sys.platform == 'win32':
-    #    sys.stderr = sys.stdout = file('c:\\outfox.log', 'w')
     print 'Launching Outfox:', pid
     # not possible to tell the launcher that the port number is missing, so just
     # fail with an exception
