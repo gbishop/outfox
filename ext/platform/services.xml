@@ -4,7 +4,7 @@
     <executable path="outfox.py">
       <arg value="audio" />
     </executable>
-    <executable path="dist/outfox.exe">
+    <executable path="dist/mypython.exe">
       <arg value="audio" />
     </executable>
   </service>
@@ -12,8 +12,16 @@
     <executable path="outfox.py">
       <arg value="echo" />
     </executable>
-    <executable path="dist/outfox.exe">
+    <executable path="dist/mypython.exe">
       <arg value="echo" />
+    </executable>
+  </service>
+  <service id="wiimote">
+    <executable path="outfox.py">
+      <arg value="wiimote" />
+    </executable>
+    <executable path="dist/mypython.exe">
+      <arg value="wiimote" />
     </executable>
   </service>
 </services>
