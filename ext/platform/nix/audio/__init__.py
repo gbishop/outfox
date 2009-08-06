@@ -28,6 +28,8 @@ FMOD_MODULE = None
 FMOD_SYSTEM = c_void_p()
 RUNNING = True
 
+FMOD_OUTPUTTYPE_ALSA = 13
+
 def buildChannel(module, ch_id):
     return channel.ChannelController(ch_id, FMOD_MODULE, FMOD_SYSTEM)
     
@@ -47,6 +49,8 @@ def run(module):
     fmod = cdll.LoadLibrary(lib)
     # create a global FMOD system object
     if fmod.FMOD_System_Create(byref(FMOD_SYSTEM)):
+        raise RuntimeError
+    if fmod.FMOD_System_SetOutput(FMOD_SYSTEM, FMOD_OUTPUTTYPE_ALSA):
         raise RuntimeError
     if fmod.FMOD_System_Init(FMOD_SYSTEM, 128, 0, None):
         raise RuntimeError
