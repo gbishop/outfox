@@ -43,7 +43,8 @@ def shutdown(module):
 
 def run(module):
     # load the FMOD dynamic lib, adjusting for py2exe build location
-    lib = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'fmodex.dll')
+    #lib = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'fmodex.dll')
+    lib = 'fmodex.dll'
     lib = os.path.abspath(lib)
     fmod = windll.LoadLibrary(lib)
     # create a global FMOD system object
